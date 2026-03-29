@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Search, MapPin, Phone, Building2, User, Pencil, Trash2, X, Save, Loader2, Building, Map } from 'lucide-react'
+import { Plus, Search, MapPin, Phone, Building2, User, Pencil, Trash2, X, Save, Loader2, Building, Map, Navigation } from 'lucide-react'
 import { createClientAction, updateClientAction, deleteClientAction } from '@/app/actions/clientActions'
 
 export default function ClientsPanel({ initialClients }: { initialClients: any[] }) {
@@ -19,6 +19,9 @@ export default function ClientsPanel({ initialClients }: { initialClients: any[]
    const [phone, setPhone] = useState('')
    const [address, setAddress] = useState('')
    const [cuit, setCuit] = useState('')
+   const [lat, setLat] = useState<number | null>(null)
+   const [lon, setLon] = useState<number | null>(null)
+   const [gettingGPS, setGettingGPS] = useState(false)
 
    const filteredClients = clients.filter((c: any) => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -33,12 +36,16 @@ export default function ClientsPanel({ initialClients }: { initialClients: any[]
          setPhone(client.phone_number || '')
          setAddress(client.address || '')
          setCuit(client.cuit || '')
+         setLat(client.latitude || null)
+         setLon(client.longitude || null)
       } else {
          setCustomerType('b2c')
          setName('')
          setPhone('')
          setAddress('')
          setCuit('')
+         setLat(null)
+         setLon(null)
       }
       setIsFormOpen(true)
    }
@@ -48,24 +55,32 @@ export default function ClientsPanel({ initialClients }: { initialClients: any[]
       if (!name) return alert("El nombre es requerido")
       setSaving(true)
 
-      let lat = editingClient?.latitude
-      let lon = editingClient?.longitude
+      let finalLat = lat
+      let finalLon = lon
 
-      // Si hay dirección y es nueva o cambió, la geocodificamos gratis con Nominatim (OSM)
-      if (address && (!editingClient || editingClient.address !== address)) {
+      // Si hay dirección y es nueva o cambió Y NO TENEMOS GPS, geocodificamos gratis con Nominatim (OSM)
+      if (address && (!editingClient || editingClient.address !== address) && (!finalLat || !finalLon)) {
          try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
             const data = await res.json()
             if (data && data.length > 0) {
-               lat = parseFloat(data[0].lat)
-               lon = parseFloat(data[0].lon)
+               finalLat = parseFloat(data[0].lat)
+               finalLon = parseFloat(data[0].lon)
             }
          } catch (error) {
             console.error("Error geocodificando la dirección:", error)
          }
       }
 
-      const payload = { customer_type: customerType, name, phone_number: phone, address, cuit, latitude: lat, longitude: lon }
+      const payload = { 
+         customer_type: customerType, 
+         name, 
+         phone_number: phone, 
+         address, 
+         cuit, 
+         latitude: finalLat !== null ? finalLat : undefined, 
+         longitude: finalLon !== null ? finalLon : undefined 
+      }
 
       if (editingClient) {
          const res = await updateClientAction(editingClient.id, payload)
@@ -90,6 +105,31 @@ export default function ClientsPanel({ initialClients }: { initialClients: any[]
       const res = await deleteClientAction(c.id)
       if (res.error) alert(res.error)
       else setClients(clients.filter(x => x.id !== c.id))
+   }
+
+   const handleDetectLocation = () => {
+      if (!navigator.geolocation) return alert('Geolocalización no soportada en este navegador.')
+      setGettingGPS(true)
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+         const crd = pos.coords
+         setLat(crd.latitude)
+         setLon(crd.longitude)
+         
+         // Reverse geocoding gratis para popular el input text
+         try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${crd.latitude}&lon=${crd.longitude}`)
+            const data = await res.json()
+            if (data && data.display_name) {
+               // Limpiamos un poco el display name si es muy largo, nos quedamos con las primeras palabras
+               const shortAddr = data.display_name.split(',').slice(0, 3).join(', ')
+               setAddress(shortAddr)
+            }
+         } catch (e) { console.error('Error reverse geocoding', e) }
+         setGettingGPS(false)
+      }, () => {
+         alert('Error al acceder al GPS. Revisá los permisos del navegador.')
+         setGettingGPS(false)
+      })
    }
 
    return (
@@ -150,7 +190,13 @@ export default function ClientsPanel({ initialClients }: { initialClients: any[]
 
                      <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Dirección de Entrega</label>
-                        <input value={address} onChange={e => setAddress(e.target.value)} type="text" className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. Av. Corrientes 1234"/>
+                        <div className="flex gap-2">
+                           <input value={address} onChange={e => { setAddress(e.target.value); setLat(null); setLon(null); }} type="text" className="flex-1 w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. Av. Corrientes 1234"/>
+                           <button type="button" onClick={handleDetectLocation} disabled={gettingGPS} className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl font-bold transition flex items-center gap-2 border border-slate-200 disabled:opacity-50" title="Obtener mi Ubicación Actual">
+                              {gettingGPS ? <Loader2 size={20} className="animate-spin text-orange-500"/> : <Navigation size={20} className={lat && lon ? "text-emerald-500" : "text-blue-500"}/>}
+                           </button>
+                        </div>
+                        {lat && lon && <p className="text-xs text-emerald-600 font-bold mt-2 flex items-center gap-1"><MapPin size={12}/> Coordenadas fijadas correctamente.</p>}
                      </div>
 
                      {customerType === 'b2b' && (
