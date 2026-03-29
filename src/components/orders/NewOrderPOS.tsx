@@ -4,6 +4,10 @@ import { useState } from 'react'
 import { createOrder } from '@/app/actions/orderActions'
 import { Plus, Trash2, ShoppingCart, Check, Loader2, ArrowRight } from 'lucide-react'
 
+const formatARS = (amount: number) => {
+   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount)
+}
+
 export default function NewOrderPOS({ 
    products, variants, clients, activeLots 
 }: { 
@@ -108,7 +112,7 @@ export default function NewOrderPOS({
                         return (
                            <button key={p.id} onClick={() => addProductToCart(p.id, null)} className="p-4 rounded-xl border-2 border-slate-100 hover:border-orange-400 focus:bg-orange-50 bg-white transition shadow-sm text-left">
                               <h4 className="font-bold text-slate-800 text-lg leading-tight">{p.name}</h4>
-                              <p className="text-orange-600 font-bold mt-2">${p.price}</p>
+                              <p className="text-orange-600 font-bold mt-2">{formatARS(p.price)}</p>
                            </button>
                         )
                      }
@@ -116,7 +120,7 @@ export default function NewOrderPOS({
                         <button key={v.id} onClick={() => addProductToCart(p.id, v.id)} className="p-4 rounded-xl border-2 border-slate-100 hover:border-orange-400 focus:bg-orange-50 bg-white transition shadow-sm text-left">
                            <h4 className="font-bold text-slate-800 text-lg leading-tight">{p.name}</h4>
                            <span className="text-sm font-semibold text-slate-500 block">{v.name}</span>
-                           <p className="text-orange-600 font-bold mt-2">${v.price_override || p.price}</p>
+                           <p className="text-orange-600 font-bold mt-2">{formatARS(v.price_override || p.price)}</p>
                         </button>
                      ))
                   })}
@@ -137,10 +141,10 @@ export default function NewOrderPOS({
                         <div className="flex justify-between items-start">
                            <div>
                               <p className="font-bold text-slate-100">{item.name}</p>
-                              <p className="text-slate-400 text-sm">${item.unitPrice} x {item.qty}</p>
+                              <p className="text-slate-400 text-sm">{formatARS(item.unitPrice)} x {item.qty}</p>
                            </div>
                            <div className="flex items-center gap-3">
-                              <p className="font-black text-orange-400 text-lg">${item.qty * item.unitPrice}</p>
+                              <p className="font-black text-orange-400 text-lg">{formatARS(item.qty * item.unitPrice)}</p>
                               <button onClick={() => removeFromCart(item.key)} className="text-slate-500 hover:text-red-400 transition"><Trash2 size={16}/></button>
                            </div>
                         </div>
@@ -209,7 +213,7 @@ export default function NewOrderPOS({
 
                <div className="pt-4 border-t-2 border-dashed border-slate-700 mb-6 flex justify-between items-end">
                   <span className="text-slate-400 font-bold">TOTAL</span>
-                  <span className="text-4xl font-black text-white">${cartTotal}</span>
+                  <span className="text-4xl font-black text-white">{formatARS(cartTotal)}</span>
                </div>
                
                <div className="space-y-4 mb-6">
@@ -249,7 +253,7 @@ export default function NewOrderPOS({
       {cartTotal > 0 && (
          <a href="#ticket-section" className="fixed bottom-20 left-4 right-4 bg-orange-500 text-white font-black p-4 rounded-xl shadow-[0_-5px_20px_-5px_rgba(249,115,22,0.5)] flex justify-between items-center lg:hidden z-40">
             <span>Ver Ticket Mágico</span>
-            <span>${cartTotal} <ArrowRight size={18} className="inline ml-2"/></span>
+            <span>{formatARS(cartTotal)} <ArrowRight size={18} className="inline ml-2"/></span>
          </a>
       )}
       </>

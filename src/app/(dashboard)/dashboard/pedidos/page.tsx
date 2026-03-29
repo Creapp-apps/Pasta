@@ -2,6 +2,10 @@ import { createClient } from '@/utils/supabase/server'
 import { PackageOpen, ArrowRight, Truck } from 'lucide-react'
 import Link from 'next/link'
 
+const formatARS = (amount: number) => {
+   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount)
+}
+
 export default async function PedidosPage() {
    const supabase = await createClient()
    const { data: { user } } = await supabase.auth.getUser()
@@ -50,7 +54,7 @@ export default async function PedidosPage() {
                         <p className="font-semibold text-slate-700 text-lg">{o.clients?.name || 'Consumidor Final'}</p>
                         <p className="text-slate-500 text-sm mt-1 border-t border-slate-50 pt-2 flex justify-between">
                            <span>{o.payment_method === 'cash' ? '💵 Efectivo' : o.payment_method === 'transfer' ? '🏦 Transf.' : '📲 MP'}</span>
-                           <span className="font-black text-slate-800 text-lg">${o.total_calc}</span>
+                           <span className="font-black text-slate-800 text-lg">{formatARS(o.total_calc)}</span>
                         </p>
                      </div>
                   </div>
@@ -78,7 +82,7 @@ export default async function PedidosPage() {
                               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider">{o.status}</span>
                            </td>
                            <td className="p-4 text-slate-500 text-sm font-medium">{o.payment_method === 'cash' ? 'Efectivo' : o.payment_method === 'transfer' ? 'Transferencia' : 'Mercado Pago'}</td>
-                           <td className="p-4 text-right font-black text-slate-800 text-lg">${o.total_calc}</td>
+                           <td className="p-4 text-right font-black text-slate-800 text-lg">{formatARS(o.total_calc)}</td>
                         </tr>
                      ))}
                   </tbody>
