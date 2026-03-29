@@ -7,7 +7,7 @@ export default async function TenantLayout({
   params,
 }: {
   children: React.ReactNode,
-  params: { tenant: string }
+  params: Promise<{ tenant: string }>
 }) {
   const { tenant: slug } = await params
   const supabase = await createClient()

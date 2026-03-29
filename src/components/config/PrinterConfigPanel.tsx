@@ -25,13 +25,14 @@ export default function PrinterConfigPanel({ tenantId, currentConfig }: { tenant
 
    const scanBluetooth = async () => {
       try {
-         if (!navigator.bluetooth) {
+         const nav = navigator as any;
+         if (!nav.bluetooth) {
             setBtStatus('Tu navegador no soporta Web Bluetooth. Usá Google Chrome en desktop o un teléfono celular.')
             return
          }
          setBtStatus('Buscando dispositivos BLE cercanos...')
          
-         const device = await navigator.bluetooth.requestDevice({
+         const device = await nav.bluetooth.requestDevice({
             acceptAllDevices: true,
             optionalServices: ['battery_service']
          })

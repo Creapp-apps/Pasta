@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import ProductCard from '@/components/store/ProductCard'
 
-export default async function StorefrontPage({ params }: { params: { tenant: string } }) {
+export default async function StorefrontPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params
   const supabase = await createClient()
 
