@@ -60,7 +60,7 @@ export default function LoginPage() {
             </button>
             <button
               formAction={signup}
-              className="flex w-full justify-center rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-3 text-sm font-semibold text-slate-900 transition cursor-pointer"
+              className="hidden w-full justify-center rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-3 text-sm font-semibold text-slate-900 transition cursor-pointer"
             >
               Crear cuenta (Solo SuperAdmin)
             </button>
