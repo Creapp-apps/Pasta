@@ -95,7 +95,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                <Link href="/dashboard/pedidos" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition font-medium">
                  <ShoppingCart size={20} /> Pedidos
                </Link>
-               <Link href="/dashboard/clients" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition font-medium">
+               <Link href="/dashboard/clientes" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition font-medium">
                  <Users size={20} /> Clientes
                </Link>
                <Link href="/dashboard/logistics" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition font-medium">

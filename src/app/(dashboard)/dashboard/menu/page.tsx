@@ -53,7 +53,7 @@ export default async function MobileMenuPage() {
                      <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-bold text-slate-500 text-xs uppercase tracking-wider">
                         Comercial y Logística
                      </div>
-                     <Link href="/dashboard/clients" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
+                     <Link href="/dashboard/clientes" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
                         <Users size={24} className="text-blue-500" />
                         <span className="font-semibold text-slate-700 text-lg">Cartera de Clientes</span>
                      </Link>
