@@ -1,8 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Search, MapPin, Phone, Building2, User, Pencil, Trash2, X, Save, Loader2, Building, Map, Navigation } from 'lucide-react'
 import { createClientAction, updateClientAction, deleteClientAction } from '@/app/actions/clientActions'
+import { createPortal } from 'react-dom'
+
+function Portal({ children }: { children: React.ReactNode }) {
+   const [mounted, setMounted] = useState(false)
+   useEffect(() => {
+      setMounted(true)
+      return () => setMounted(false)
+   }, [])
+   return mounted ? createPortal(children, document.body) : null
+}
+
 
 export default function ClientsPanel({ initialClients }: { initialClients: any[] }) {
    const [clients, setClients] = useState(initialClients || [])
@@ -151,72 +162,73 @@ export default function ClientsPanel({ initialClients }: { initialClients: any[]
                onChange={e => setSearchQuery(e.target.value)}
                className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition"
             />
-         </div>
-
-         {/* Editor / Formulario Móvil y Desktop */}
-         {isFormOpen && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-slate-900/40 backdrop-blur-sm">
-               <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 duration-300">
-                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                     <h2 className="font-bold text-xl text-slate-800">
-                        {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
-                     </h2>
-                     <button onClick={() => setIsFormOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition">
-                        <X size={20}/>
-                     </button>
-                  </div>
-                  
-                  <form onSubmit={saveClient} className="p-6 space-y-5">
-                     <div className="flex bg-slate-100 p-1 rounded-xl">
-                        <button type="button" onClick={() => setCustomerType('b2c')} className={`flex-1 py-2 text-sm font-bold flex items-center justify-center gap-2 rounded-lg transition ${customerType === 'b2c' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                           <User size={16}/> Minorista
-                        </button>
-                        <button type="button" onClick={() => setCustomerType('b2b')} className={`flex-1 py-2 text-sm font-bold flex items-center justify-center gap-2 rounded-lg transition ${customerType === 'b2b' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                           <Building2 size={16}/> Mayorista
-                        </button>
-                     </div>
-
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Nombre / Razón Social *</label>
-                        <input value={name} onChange={e => setName(e.target.value)} required type="text" className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. El Almacen de Don Pepe"/>
-                     </div>
-
-                     <div className="grid grid-cols-1 gap-5">
-                        <div>
-                           <label className="block text-sm font-bold text-slate-700 mb-1">Teléfono (WhatsApp)</label>
-                           <input value={phone} onChange={e => setPhone(e.target.value)} type="text" className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. +54 9 11 1234 5678"/>
-                        </div>
-                     </div>
-
-                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Dirección de Entrega</label>
-                        <div className="flex gap-2">
-                           <input value={address} onChange={e => { setAddress(e.target.value); setLat(null); setLon(null); }} type="text" className="flex-1 w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. Av. Corrientes 1234"/>
-                           <button type="button" onClick={handleDetectLocation} disabled={gettingGPS} className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl font-bold transition flex items-center gap-2 border border-slate-200 disabled:opacity-50" title="Obtener mi Ubicación Actual">
-                              {gettingGPS ? <Loader2 size={20} className="animate-spin text-orange-500"/> : <Navigation size={20} className={lat && lon ? "text-emerald-500" : "text-blue-500"}/>}
+            {/* Editor / Formulario Móvil y Desktop */}
+            {isFormOpen && (
+               <Portal>
+                  <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                     <div className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-8 duration-300 text-left">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                           <h2 className="font-bold text-xl text-slate-800">
+                              {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
+                           </h2>
+                           <button onClick={() => setIsFormOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition">
+                              <X size={20}/>
                            </button>
                         </div>
-                        {lat && lon && <p className="text-xs text-emerald-600 font-bold mt-2 flex items-center gap-1"><MapPin size={12}/> Coordenadas fijadas correctamente.</p>}
-                     </div>
+                        
+                        <form onSubmit={saveClient} className="p-6 space-y-5">
+                           <div className="flex bg-slate-100 p-1 rounded-xl">
+                              <button type="button" onClick={() => setCustomerType('b2c')} className={`flex-1 py-2 text-sm font-bold flex items-center justify-center gap-2 rounded-lg transition ${customerType === 'b2c' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                 <User size={16}/> Minorista
+                              </button>
+                              <button type="button" onClick={() => setCustomerType('b2b')} className={`flex-1 py-2 text-sm font-bold flex items-center justify-center gap-2 rounded-lg transition ${customerType === 'b2b' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                 <Building2 size={16}/> Mayorista
+                              </button>
+                           </div>
 
-                     {customerType === 'b2b' && (
-                        <div className="animate-in fade-in zoom-in-95 duration-200">
-                           <label className="block text-sm font-bold text-slate-700 mb-1 text-purple-700 flex items-center gap-2">
-                              <Building size={16}/> CUIT (Opcional)
-                           </label>
-                           <input value={cuit} onChange={e => setCuit(e.target.value)} type="text" className="w-full px-4 py-3 border border-purple-200 bg-purple-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-purple-900" placeholder="Ej. 30-12345678-9"/>
-                        </div>
-                     )}
+                           <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-1">Nombre / Razón Social *</label>
+                              <input value={name} onChange={e => setName(e.target.value)} required type="text" className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. El Almacen de Don Pepe"/>
+                           </div>
 
-                     <div className="pt-4">
-                        <button type="submit" disabled={saving} className="w-full py-4 bg-orange-500 hover:bg-orange-600 flex justify-center items-center gap-2 text-white font-bold rounded-xl transition shadow-lg shadow-orange-500/30 disabled:opacity-50">
-                           {saving ? <Loader2 size={20} className="animate-spin"/> : <><Save size={20}/> Guardar Cliente</>}
-                        </button>
+                           <div className="grid grid-cols-1 gap-5">
+                              <div>
+                                 <label className="block text-sm font-bold text-slate-700 mb-1">Teléfono (WhatsApp)</label>
+                                 <input value={phone} onChange={e => setPhone(e.target.value)} type="text" className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. +54 9 11 1234 5678"/>
+                              </div>
+                           </div>
+
+                           <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-1">Dirección de Entrega</label>
+                              <div className="flex gap-2">
+                                 <input value={address} onChange={e => { setAddress(e.target.value); setLat(null); setLon(null); }} type="text" className="flex-1 w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white" placeholder="Ej. Av. Corrientes 1234"/>
+                                 <button type="button" onClick={handleDetectLocation} disabled={gettingGPS} className="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-xl font-bold transition flex items-center gap-2 border border-slate-200 disabled:opacity-50" title="Obtener mi Ubicación Actual">
+                                    {gettingGPS ? <Loader2 size={20} className="animate-spin text-orange-500"/> : <Navigation size={20} className={lat && lon ? "text-emerald-500" : "text-blue-500"}/>}
+                                 </button>
+                              </div>
+                              {lat && lon && <p className="text-xs text-emerald-600 font-bold mt-2 flex items-center gap-1"><MapPin size={12}/> Coordenadas fijadas correctamente.</p>}
+                           </div>
+
+                           {customerType === 'b2b' && (
+                              <div className="animate-in fade-in zoom-in-95 duration-200">
+                                 <label className="block text-sm font-bold text-slate-700 mb-1 text-purple-700 flex items-center gap-2">
+                                    <Building size={16}/> CUIT (Opcional)
+                                 </label>
+                                 <input value={cuit} onChange={e => setCuit(e.target.value)} type="text" className="w-full px-4 py-3 border border-purple-200 bg-purple-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-purple-900" placeholder="Ej. 30-12345678-9"/>
+                              </div>
+                           )}
+
+                           <div className="pt-4">
+                              <button type="submit" disabled={saving} className="w-full py-4 bg-orange-500 hover:bg-orange-600 flex justify-center items-center gap-2 text-white font-bold rounded-xl transition shadow-lg shadow-orange-500/30 disabled:opacity-50">
+                                 {saving ? <Loader2 size={20} className="animate-spin"/> : <><Save size={20}/> Guardar Cliente</>}
+                              </button>
+                           </div>
+                        </form>
                      </div>
-                  </form>
-               </div>
-            </div>
-         )}
+                  </div>
+               </Portal>
+            )}
+         </div>
 
          {/* Lista Mobile Cards */}
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">

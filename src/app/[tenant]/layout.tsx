@@ -28,12 +28,17 @@ export default async function TenantLayout({
        <div className="min-h-screen bg-orange-50/50 flex flex-col">
           <header className="bg-white sticky top-0 z-40 border-b border-orange-100 shadow-sm">
              <div className="max-w-5xl mx-auto px-4 h-20 flex items-center justify-between">
-                <div className="flex flex-col">
-                   <span className="text-xs font-bold text-orange-500 tracking-wider uppercase">Catálogo Digital</span>
-                   <span className="font-black text-2xl text-slate-800 tracking-tight">
-                      {tenantData.name}
-                   </span>
-                </div>
+                 <div className="flex items-center gap-3">
+                    {tenantData.logo_url && (
+                       <img src={tenantData.logo_url} alt="Logo" className="h-12 w-12 object-contain rounded-xl border border-slate-100 bg-slate-50 shrink-0" />
+                    )}
+                    <div className="flex flex-col">
+                       <span className="text-[10px] font-black text-orange-500 tracking-wider uppercase">Catálogo Digital</span>
+                       <span className="font-black text-xl lg:text-2xl text-slate-800 tracking-tight">
+                          {tenantData.name}
+                       </span>
+                    </div>
+                 </div>
                 <CartHeaderIcon />
              </div>
           </header>

@@ -25,7 +25,7 @@ export async function submitProductionAction(recipeId: string, quantityToProduce
 
       // 1. Sumar Stock Físico a los Productos Terminados
       const { data: finishedProduct } = await supabase.from('products').select('current_stock').eq('id', recipe.finished_product_id).single()
-      await supabase.from('products').update({ current_stock: Number(finishedProduct.current_stock) + quantityToProduce }).eq('id', recipe.finished_product_id)
+      await supabase.from('products').update({ current_stock: Number(finishedProduct?.current_stock || 0) + quantityToProduce }).eq('id', recipe.finished_product_id)
 
       // 1-A. Guardar evento de auditoría en stock_movements
       await supabase.from('stock_movements').insert({
@@ -39,7 +39,7 @@ export async function submitProductionAction(recipeId: string, quantityToProduce
          const consumedQty = ingredient.required_quantity * multiplier
          const { data: rawMat } = await supabase.from('products').select('current_stock').eq('id', ingredient.raw_material_id).single()
          
-         await supabase.from('products').update({ current_stock: Number(rawMat.current_stock) - consumedQty }).eq('id', ingredient.raw_material_id)
+         await supabase.from('products').update({ current_stock: Number(rawMat?.current_stock || 0) - consumedQty }).eq('id', ingredient.raw_material_id)
          
          await supabase.from('stock_movements').insert({
             tenant_id: tenantId, product_id: ingredient.raw_material_id,

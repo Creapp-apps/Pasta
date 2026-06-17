@@ -81,6 +81,9 @@ export default async function StockCentralPage() {
          </div>
 
          <div className="grid grid-cols-1 gap-6">
+            {/* Productos Terminados con Acordeón de Lotes */}
+            <FinishedProductsList terminados={terminados} allLots={activeLots || []} />
+
             {/* Insumos */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                <h3 className="font-bold text-slate-800 mb-4 border-b border-slate-100 pb-4 flex items-center gap-2">
@@ -108,9 +111,6 @@ export default async function StockCentralPage() {
                   </div>
                )}
             </div>
-
-            {/* Productos Terminados con Acordeón de Lotes */}
-            <FinishedProductsList terminados={terminados} allLots={activeLots || []} />
          </div>
       </div>
    )

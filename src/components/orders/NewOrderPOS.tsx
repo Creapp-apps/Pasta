@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { createOrder } from '@/app/actions/orderActions'
-import { Plus, Trash2, ShoppingCart, Check, Loader2, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, ShoppingCart, Check, Loader2, ArrowRight, CheckCircle2, AlertCircle, Info } from 'lucide-react'
+import LoadingOverlay from '../layout/LoadingOverlay'
 
 const formatARS = (amount: number) => {
    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(amount)
@@ -13,11 +15,19 @@ export default function NewOrderPOS({
 }: { 
    products: any[], variants: any[], clients: any[], activeLots: any[] 
 }) {
+   const router = useRouter()
+   const [isPending, startTransition] = useTransition()
    const [isManualLots, setIsManualLots] = useState(false)
    const [cartMap, setCartMap] = useState<any>({})
    const [selectedClient, setSelectedClient] = useState('')
    const [paymentMethod, setPaymentMethod] = useState('cash')
    const [loading, setLoading] = useState(false)
+   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
+
+   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+      setToast({ message, type })
+      setTimeout(() => setToast(null), 4000)
+   }
 
    const addProductToCart = (prodId: string, varId: string | null) => {
       const p = products.find(x => x.id === prodId)
@@ -54,39 +64,42 @@ export default function NewOrderPOS({
    const cartItems = Object.entries(cartMap).map(([k, v]) => ({ key: k, ...(v as any) }))
    const cartTotal = cartItems.reduce((acc, obj) => acc + (obj.qty * obj.unitPrice), 0)
 
-   const handleSubmit = async () => {
-      if (cartItems.length === 0) return alert('El carrito está vacío.')
+   const handleSubmit = () => {
+      if (cartItems.length === 0) return showToast('El carrito está vacío.', 'error')
       if (isManualLots) {
          // Valida si manual allocations == qty para cada item
          for (const i of cartItems) {
             const allocTotal = i.manualAllocations?.reduce((sum: number, a: any) => sum + (parseFloat(a.qty) || 0), 0) || 0
             if (allocTotal !== i.qty) {
-               return alert(`Error: El producto ${i.name} dice ${i.qty} cajas, pero vos le asignaste de lotes un total de ${allocTotal} cajas. Ajustá el stock manual para que coincidan.`)
+               return showToast(`Error: El producto ${i.name} dice ${i.qty} unidades, pero vos le asignaste de lotes un total de ${allocTotal}. Ajustá el stock manual para que coincidan.`, 'error')
             }
          }
       }
 
-      setLoading(true)
-      const res = await createOrder({
-         clientId: selectedClient || null,
-         items: cartItems.map(i => ({
-            productId: i.productId,
-            variantId: i.variantId,
-            qty: i.qty,
-            unitPrice: i.unitPrice,
-            manualAllocations: isManualLots ? i.manualAllocations : undefined
-         })),
-         paymentMethod,
-         isManualLotSelection: isManualLots,
-         totalCalc: cartTotal
-      })
-      setLoading(false)
+      startTransition(async () => {
+         setLoading(true)
+         const res = await createOrder({
+            clientId: selectedClient || null,
+            items: cartItems.map(i => ({
+               productId: i.productId,
+               variantId: i.variantId,
+               qty: i.qty,
+               unitPrice: i.unitPrice,
+               manualAllocations: isManualLots ? i.manualAllocations : undefined
+            })),
+            paymentMethod,
+            isManualLotSelection: isManualLots,
+            totalCalc: cartTotal
+         })
+         setLoading(false)
 
-      if (res.error) return alert(res.error)
-      
-      setCartMap({})
-      setSelectedClient('')
-      alert(`¡Pedido #${res.orderId.substring(0,6)} creado y descontado con éxito!`)
+         if (res.error) return showToast(res.error, 'error')
+         
+         setCartMap({})
+         setSelectedClient('')
+         showToast(`¡Pedido #${res.orderId.substring(0,6)} creado y descontado con éxito!`, 'success')
+         router.refresh()
+      })
    }
 
    return (
@@ -105,26 +118,63 @@ export default function NewOrderPOS({
                   </label>
                </div>
 
-               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {products.map(p => {
-                     const pVars = variants.filter(v => v.product_id === p.id)
-                     if (pVars.length === 0) {
-                        return (
-                           <button key={p.id} onClick={() => addProductToCart(p.id, null)} className="p-4 rounded-xl border-2 border-slate-100 hover:border-orange-400 focus:bg-orange-50 bg-white transition shadow-sm text-left">
-                              <h4 className="font-bold text-slate-800 text-lg leading-tight">{p.name}</h4>
-                              <p className="text-orange-600 font-bold mt-2">{formatARS(p.price)}</p>
-                           </button>
-                        )
-                     }
-                     return pVars.map((v: any) => (
-                        <button key={v.id} onClick={() => addProductToCart(p.id, v.id)} className="p-4 rounded-xl border-2 border-slate-100 hover:border-orange-400 focus:bg-orange-50 bg-white transition shadow-sm text-left">
-                           <h4 className="font-bold text-slate-800 text-lg leading-tight">{p.name}</h4>
-                           <span className="text-sm font-semibold text-slate-500 block">{v.name}</span>
-                           <p className="text-orange-600 font-bold mt-2">{formatARS(v.price_override || p.price)}</p>
-                        </button>
-                     ))
-                  })}
-               </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                   {products.map(p => {
+                      const pVars = variants.filter(v => v.product_id === p.id)
+                      if (pVars.length === 0) {
+                         const prodStock = p.current_stock !== undefined && p.current_stock !== null ? p.current_stock : 0
+                         return (
+                            <button 
+                               key={p.id} 
+                               onClick={() => addProductToCart(p.id, null)} 
+                               className="p-5 rounded-2xl border-2 border-slate-100 hover:border-orange-400 focus:bg-orange-50 bg-white transition shadow-sm text-left flex flex-col justify-between h-full group"
+                            >
+                               <div>
+                                  <h4 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-orange-600 transition">{p.name}</h4>
+                                  <span className="text-xs font-bold text-slate-400 mt-2 block bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 w-max">
+                                     Stock: {prodStock} {p.unit_of_measure || 'u.'}
+                                  </span>
+                                </div>
+                                <p className="text-orange-600 font-extrabold text-xl mt-4">{formatARS(p.price)}</p>
+                            </button>
+                         )
+                      }
+
+                      // Product with variants (flavors)
+                      return (
+                         <div key={p.id} className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col h-full">
+                            <div className="border-b border-slate-100 pb-3">
+                               <h4 className="font-extrabold text-slate-800 text-lg leading-tight uppercase tracking-wider">{p.name}</h4>
+                               <p className="text-[10px] text-slate-400 font-black mt-1 uppercase tracking-widest">Sabores y Precios</p>
+                            </div>
+                            <div className="space-y-2 flex-1 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+                               {pVars.map((v: any) => {
+                                  const varLots = activeLots.filter((l: any) => l.variant_id === v.id)
+                                  const varStock = varLots.reduce((acc: number, curr: any) => acc + Number(curr.quantity_remaining || 0), 0)
+                                  const price = v.price_override || p.price || 0
+                                  return (
+                                     <button
+                                        key={v.id}
+                                        onClick={() => addProductToCart(p.id, v.id)}
+                                        className="w-full p-3 rounded-xl border border-slate-100 hover:border-orange-300 hover:bg-orange-50/40 text-left flex justify-between items-center transition group active:scale-[0.98] duration-100"
+                                     >
+                                        <div className="space-y-0.5 pr-2">
+                                           <p className="font-bold text-slate-700 text-sm group-hover:text-slate-900 leading-tight">{v.name}</p>
+                                           <p className="text-[10px] font-bold text-slate-400">
+                                              Stock: {varStock} {p.unit_of_measure || 'u.'}
+                                           </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                           <p className="text-orange-600 font-extrabold text-sm">{formatARS(price)}</p>
+                                        </div>
+                                     </button>
+                                  )
+                               })}
+                            </div>
+                         </div>
+                      )
+                   })}
+                </div>
             </div>
          </div>
 
@@ -256,6 +306,22 @@ export default function NewOrderPOS({
             <span>{formatARS(cartTotal)} <ArrowRight size={18} className="inline ml-2"/></span>
          </a>
       )}
+         {/* Loading Overlay */}
+         {isPending && <LoadingOverlay message="Cobrando y actualizando stock..." />}
+
+         {/* Toast Notification */}
+         {toast && (
+            <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border text-sm font-extrabold animate-in fade-in slide-in-from-top-4 duration-300 ${
+               toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+               toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+               'bg-blue-50 border-blue-200 text-blue-800'
+            }`}>
+               {toast.type === 'success' && <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />}
+               {toast.type === 'error' && <AlertCircle size={18} className="text-red-500 shrink-0" />}
+               {toast.type === 'info' && <Info size={18} className="text-blue-500 shrink-0" />}
+               <span>{toast.message}</span>
+            </div>
+         )}
       </>
    )
 }

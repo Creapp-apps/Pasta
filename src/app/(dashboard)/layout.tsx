@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { LogOut, Home, Package, ShoppingCart, Users, Truck, Factory, CreditCard, Settings, Wheat, UtensilsCrossed, BarChart3, Printer, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import BottomNav from '@/components/layout/BottomNav'
+import NavigationLoader from '@/components/layout/NavigationLoader'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -35,6 +36,63 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const isSuperAdmin = !!superAdmin
+
+  // Fetch data for BottomNav quick actions
+  let products: any[] = []
+  let clients: any[] = []
+  let recipes: any[] = []
+  let variants: any[] = []
+  let productionLots: any[] = []
+  let todayOrders: any[] = []
+  let todayWaste: any[] = []
+  let activeSession: any = null
+
+  if (!isSuperAdmin && employeeData) {
+     const tenantId = employeeData.tenant_id
+     const { data: prodData } = await supabase.from('products').select('*').eq('tenant_id', tenantId)
+     products = prodData || []
+
+     const { data: clientData } = await supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name')
+     clients = clientData || []
+
+     const { data: recData } = await supabase.from('recipes').select('finished_product_id').eq('tenant_id', tenantId)
+     recipes = recData?.map(r => r.finished_product_id) || []
+
+     const { data: varData } = await supabase.from('product_variants').select('*').eq('tenant_id', tenantId)
+     variants = varData || []
+
+     const { data: lotsData } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).gt('quantity_remaining', 0)
+     productionLots = lotsData || []
+
+     // Fetch metrics for Metrics Modal
+     const today = new Date()
+     today.setHours(0,0,0,0)
+     const todayIso = today.toISOString()
+
+     const { data: todayOrdData } = await supabase
+        .from('orders')
+        .select('total_calc, payment_method, status, cash_session_id')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', todayIso)
+     todayOrders = todayOrdData || []
+
+     const { data: todayWstData } = await supabase
+        .from('stock_movements')
+        .select('quantity')
+        .eq('tenant_id', tenantId)
+        .eq('movement_type', 'waste')
+        .gte('created_at', todayIso)
+     todayWaste = todayWstData || []
+
+     const { data: actSessData } = await supabase
+        .from('cash_sessions')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'open')
+        .maybeSingle()
+     activeSession = actSessData
+  }
+
   const roleTitle = isSuperAdmin ? "Súper Admin Maestro" : employeeData?.role || "Inactivo"
   const userInitial = user.email?.charAt(0).toUpperCase()
 
@@ -44,10 +102,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <aside className="hidden md:flex w-64 border-r border-slate-200 bg-white flex flex-col shadow-sm shrink-0">
         <div className="h-16 flex items-center px-6 border-b border-slate-100">
           <Link href="/dashboard" className="text-xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
-            <span className="bg-orange-500 text-white p-1.5 rounded-lg">
-              {isSuperAdmin ? <Factory size={20}/> : <Home size={20}/>}
+            {isSuperAdmin ? (
+               <span className="bg-orange-500 text-white p-1.5 rounded-lg">
+                 <Factory size={20}/>
+               </span>
+            ) : tenantData?.logo_url ? (
+               <img src={tenantData.logo_url} alt="Logo" className="h-9 w-9 object-contain rounded-lg border border-slate-100 shrink-0" />
+            ) : (
+               <span className="bg-orange-500 text-white p-1.5 rounded-lg">
+                 <Home size={20}/>
+               </span>
+            )}
+            <span className="truncate max-w-[150px]">
+               {isSuperAdmin ? 'Panel SaaS' : tenantData?.name || 'Fábrica'}
             </span>
-            {isSuperAdmin ? 'Panel SaaS' : tenantData?.name || 'Fábrica'}
           </Link>
         </div>
         
@@ -145,8 +213,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </main>
 
+      {/* Loader de navegación global */}
+      <NavigationLoader />
+
       {/* Tab Bar Móvil */}
-      <BottomNav />
+      <BottomNav 
+         isSuperAdmin={isSuperAdmin}
+         products={products}
+         clients={clients}
+         recipes={recipes}
+         variants={variants}
+         productionLots={productionLots}
+         userData={employeeData}
+         tenantData={tenantData}
+         todayOrders={todayOrders}
+         todayWaste={todayWaste}
+         activeSession={activeSession}
+      />
     </div>
   )
 }

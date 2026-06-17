@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Loader2, BookOpen } from 'lucide-react'
 import { createRecipeAction } from '@/app/actions/recipeActions'
+import LoadingOverlay from '../layout/LoadingOverlay'
 
 export default function RecipeBuilderForm({ finishedProducts, rawMaterials }: { finishedProducts: any[], rawMaterials: any[] }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [selectedProduct, setSelectedProduct] = useState('')
   const [yieldQty, setYieldQty] = useState(1)
   const [ingredients, setIngredients] = useState([{ rawMaterialId: '', qty: '' }])
@@ -23,31 +27,33 @@ export default function RecipeBuilderForm({ finishedProducts, rawMaterials }: { 
      setIngredients(newIng)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
      e.preventDefault()
-     setLoading(true)
      
      if (!selectedProduct || ingredients.some(i => !i.rawMaterialId || !i.qty)) {
         alert('Completá todos los campos de insumos.')
-        setLoading(false)
         return
      }
 
-     const formData = new FormData()
-     formData.append('finishedProductId', selectedProduct)
-     formData.append('baseYield', yieldQty.toString())
-     formData.append('ingredients', JSON.stringify(ingredients))
-     
-     const res = await createRecipeAction(formData)
-     setLoading(false)
-     
-     if (res.error) {
-        alert(res.error)
-     } else {
-        alert('Receta BOM guardada existosamente. Cuando el operario la cocine, este stock se descontará automáticamente.')
-        setSelectedProduct('')
-        setIngredients([{ rawMaterialId: '', qty: '' }])
-     }
+     startTransition(async () => {
+        setLoading(true)
+        const formData = new FormData()
+        formData.append('finishedProductId', selectedProduct)
+        formData.append('baseYield', yieldQty.toString())
+        formData.append('ingredients', JSON.stringify(ingredients))
+        
+        const res = await createRecipeAction(formData)
+        setLoading(false)
+        
+        if (res.error) {
+           alert(res.error)
+        } else {
+           alert('Receta BOM guardada existosamente. Cuando el operario la cocine, este stock se descontará automáticamente.')
+           setSelectedProduct('')
+           setIngredients([{ rawMaterialId: '', qty: '' }])
+           router.refresh()
+        }
+     })
   }
 
   return (
@@ -108,6 +114,7 @@ export default function RecipeBuilderForm({ finishedProducts, rawMaterials }: { 
        <button disabled={loading} type="submit" className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-slate-900 shadow-xl shadow-slate-900/20 hover:bg-slate-800 text-white rounded-xl font-bold text-lg transition cursor-pointer disabled:opacity-70">
           {loading ? <Loader2 size={24} className="animate-spin" /> : 'Sematizar Receta en Sistema'}
        </button>
+       {isPending && <LoadingOverlay message="Guardando receta técnica..." />}
      </form>
   )
 }

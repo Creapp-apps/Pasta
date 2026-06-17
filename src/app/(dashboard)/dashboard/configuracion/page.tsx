@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
-import { Settings, Printer } from 'lucide-react'
+import { Settings, Printer, Building2 } from 'lucide-react'
 import PrinterConfigPanel from '@/components/config/PrinterConfigPanel'
+import TenantConfigPanel from '@/components/config/TenantConfigPanel'
 
 export default async function ConfiguracionPage() {
    const supabase = await createClient()
@@ -15,13 +16,27 @@ export default async function ConfiguracionPage() {
       .eq('tenant_id', userData.tenant_id)
       .single()
 
+   const { data: tenantData } = await supabase
+      .from('tenants')
+      .select('name, logo_url')
+      .eq('id', userData.tenant_id)
+      .single()
+
    return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 max-w-3xl">
          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
                <Settings className="text-orange-500" size={28} /> Configuración
             </h2>
-            <p className="text-slate-500 text-sm mt-1">Ajustes de impresora, etiquetas y sistema.</p>
+            <p className="text-slate-500 text-sm mt-1">Ajustes de identidad, impresora, etiquetas y sistema.</p>
+         </div>
+
+         {/* Identidad de la Fábrica */}
+         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 className="font-bold text-slate-800 mb-6 border-b border-slate-100 pb-4 flex items-center gap-3">
+               <Building2 className="text-orange-500" size={22}/> Identidad de la Fábrica
+            </h3>
+            <TenantConfigPanel tenantData={tenantData} />
          </div>
 
          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">

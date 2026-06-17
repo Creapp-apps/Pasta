@@ -2,6 +2,8 @@ import { createClient } from '@/utils/supabase/server'
 import { UtensilsCrossed, Trash2 } from 'lucide-react'
 import ProductWizard from '@/components/productos/ProductWizard'
 import DeleteProductButton from '@/components/productos/DeleteProductButton'
+import ProductPriceEditor from '@/components/productos/ProductPriceEditor'
+import VariantPriceEditor from '@/components/productos/VariantPriceEditor'
 
 export default async function ProductosPage() {
    const supabase = await createClient()
@@ -81,8 +83,8 @@ export default async function ProductosPage() {
                                     </div>
                                  </div>
                                  <div className="flex items-start gap-4">
-                                    <div className="text-right">
-                                       <p className="font-black text-2xl text-slate-900">${prod.price}</p>
+                                    <div className="text-right flex flex-col items-end">
+                                       <ProductPriceEditor product={prod} />
                                        <p className="text-xs text-slate-400 font-medium">precio base</p>
                                     </div>
                                     <DeleteProductButton productId={prod.id} productName={prod.name} />
@@ -93,9 +95,11 @@ export default async function ProductosPage() {
                                  <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Variantes:</p>
                                     {prodVariants.map(v => (
-                                       <div key={v.id} className="flex justify-between items-center bg-white px-3 py-2 rounded-lg text-sm border border-slate-100">
-                                          <span className="font-semibold text-slate-700">{v.name}</span>
-                                          <span className="font-bold text-slate-900">{v.price_override ? `$${v.price_override}` : 'Precio base'}</span>
+                                       <div key={v.id} className="flex justify-between items-start bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm gap-4 text-left">
+                                          <span className="font-bold text-slate-700 text-sm flex-1 break-words">{v.name}</span>
+                                          <div className="shrink-0">
+                                             <VariantPriceEditor variant={v} />
+                                          </div>
                                        </div>
                                     ))}
                                  </div>

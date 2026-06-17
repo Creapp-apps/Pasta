@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-import { Wheat, UtensilsCrossed, Users, Truck, Printer, Factory, CreditCard, Settings, Home, LogOut } from 'lucide-react'
+import { Wheat, UtensilsCrossed, Users, Truck, Printer, Factory, CreditCard, Settings, Home, LogOut, CheckCircle2, BarChart3 } from 'lucide-react'
 
 export default async function MobileMenuPage() {
    const supabase = await createClient()
@@ -37,29 +37,31 @@ export default async function MobileMenuPage() {
                <>
                   <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                      <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                        Catálogos y Base
+                        Administración
                      </div>
                      <Link href="/dashboard/productos" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
-                        <UtensilsCrossed size={24} className="text-orange-500" />
-                        <span className="font-semibold text-slate-700 text-lg">Productos Terminados</span>
+                        <UtensilsCrossed size={24} className="text-orange-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 text-lg">Stock (Productos)</span>
                      </Link>
-                     <Link href="/dashboard/insumos" className="flex items-center gap-4 p-4 active:bg-orange-50 transition">
-                        <Wheat size={24} className="text-amber-600" />
-                        <span className="font-semibold text-slate-700 text-lg">Materia Prima (Insumos)</span>
+                     <Link href="/dashboard/insumos" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
+                        <Wheat size={24} className="text-amber-600 shrink-0" />
+                        <span className="font-semibold text-slate-700 text-lg">Insumos</span>
                      </Link>
-                  </div>
-
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                     <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                        Comercial y Logística
-                     </div>
                      <Link href="/dashboard/clientes" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
-                        <Users size={24} className="text-blue-500" />
-                        <span className="font-semibold text-slate-700 text-lg">Cartera de Clientes</span>
+                        <Users size={24} className="text-blue-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 text-lg">Clientes</span>
                      </Link>
-                     <Link href="/dashboard/logistics" className="flex items-center gap-4 p-4 active:bg-orange-50 transition">
-                        <Truck size={24} className="text-emerald-500" />
-                        <span className="font-semibold text-slate-700 text-lg">Reparto y Logística</span>
+                     <Link href="/dashboard/pedidos?tab=delivered" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
+                        <CheckCircle2 size={24} className="text-emerald-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 text-lg">Pedidos Entregados</span>
+                     </Link>
+                     <Link href="/dashboard" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
+                        <BarChart3 size={24} className="text-purple-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 text-lg">Métricas</span>
+                     </Link>
+                     <Link href="/dashboard/logistics" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
+                        <Truck size={24} className="text-emerald-500 shrink-0" />
+                        <span className="font-semibold text-slate-700 text-lg">Repartos</span>
                      </Link>
                   </div>
 
@@ -68,8 +70,8 @@ export default async function MobileMenuPage() {
                         Sistema
                      </div>
                      <Link href="/dashboard/configuracion" className="flex items-center gap-4 p-4 border-b border-slate-100 active:bg-orange-50 transition">
-                        <Printer size={24} className="text-slate-600" />
-                        <span className="font-semibold text-slate-700 text-lg">Configuración e Impresoras</span>
+                        <Printer size={24} className="text-slate-550" />
+                        <span className="font-semibold text-slate-700 text-lg">Configuración</span>
                      </Link>
                      
                      <form action="/auth/signout" method="post" className="w-full">

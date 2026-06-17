@@ -28,7 +28,7 @@ export async function createClientAction(clientData: { customer_type: string, na
    const { data: userData } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
    if (!userData?.tenant_id) return { error: "No tenant ID found" }
 
-   const { error } = await supabase
+   const { data, error } = await supabase
       .from('clients')
       .insert({
          tenant_id: userData.tenant_id,
@@ -41,12 +41,14 @@ export async function createClientAction(clientData: { customer_type: string, na
          latitude: clientData.latitude,
          longitude: clientData.longitude
       })
+      .select()
+      .single()
       
    if (error) return { error: error.message }
    
    revalidatePath('/dashboard/clientes')
    revalidatePath('/dashboard/pedidos')
-   return { success: true }
+   return { success: true, clientId: data.id }
 }
 
 export async function updateClientAction(id: string, clientData: { customer_type: string, name: string, phone_number?: string, address?: string, zone_tag?: string, cuit?: string, latitude?: number, longitude?: number }) {
@@ -83,3 +85,22 @@ export async function deleteClientAction(id: string) {
    revalidatePath('/dashboard/pedidos')
    return { success: true }
 }
+
+export async function updateClientAddressAction(clientId: string, address: string) {
+   try {
+      const supabase = await createClient()
+      const { error } = await supabase
+         .from('clients')
+         .update({ address })
+         .eq('id', clientId)
+
+      if (error) throw new Error(error.message)
+
+      revalidatePath('/dashboard/clientes')
+      revalidatePath('/dashboard/pedidos')
+      return { success: true }
+   } catch (error: any) {
+      return { error: error.message }
+   }
+}
+

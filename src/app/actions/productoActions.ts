@@ -98,3 +98,43 @@ export async function deleteProduct(productId: string) {
       return { error: err.message }
    }
 }
+
+export async function updateVariantPrice(variantId: string, newPrice: number | null) {
+   try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No autenticado")
+
+      const { error } = await supabase
+         .from('product_variants')
+         .update({ price_override: newPrice })
+         .eq('id', variantId)
+
+      if (error) throw new Error("Error actualizando precio de variante: " + error.message)
+
+      revalidatePath('/dashboard/productos')
+      return { success: true }
+   } catch (err: any) {
+      return { error: err.message }
+   }
+}
+
+export async function updateProductPrice(productId: string, newPrice: number) {
+   try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("No autenticado")
+
+      const { error } = await supabase
+         .from('products')
+         .update({ price: newPrice })
+         .eq('id', productId)
+
+      if (error) throw new Error("Error actualizando precio base: " + error.message)
+
+      revalidatePath('/dashboard/productos')
+      return { success: true }
+   } catch (err: any) {
+      return { error: err.message }
+   }
+}

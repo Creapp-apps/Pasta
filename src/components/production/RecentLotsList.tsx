@@ -1,30 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Pencil, Trash2, Save, X, Printer } from 'lucide-react'
 import { adjustLot, deleteLot } from '@/app/actions/lotProductionActions'
+import LoadingOverlay from '../layout/LoadingOverlay'
 
 export default function RecentLotsList({ recentLots }: { recentLots: any[] }) {
+   const router = useRouter()
+   const [isPending, startTransition] = useTransition()
    const [editingLot, setEditingLot] = useState<string | null>(null)
    const [editQty, setEditQty] = useState('')
    const [editReason, setEditReason] = useState('')
 
-   const handleSave = async (lot: any) => {
+   const handleSave = (lot: any) => {
       if (!editReason) return alert("Tenés que justificar el motivo del cambio.")
       const qty = parseFloat(editQty)
       if (isNaN(qty) || qty < 0) return alert("Cantidad inválida")
 
-      await adjustLot(lot.id, qty, editReason)
-      setEditingLot(null)
-      setEditReason('')
+      startTransition(async () => {
+         await adjustLot(lot.id, qty, editReason)
+         setEditingLot(null)
+         setEditReason('')
+         router.refresh()
+      })
    }
 
-   const handleDelete = async (lot: any) => {
+   const handleDelete = (lot: any) => {
       const reason = prompt("Justificación para ELIMINAR lote:")
       if (!reason) return
       if (!confirm(`¿Eliminar LOTE ${lot.lot_code} permanentemente? Esto va a descontar el stock.`)) return
       
-      await deleteLot(lot.id, reason)
+      startTransition(async () => {
+         await deleteLot(lot.id, reason)
+         router.refresh()
+      })
    }
 
    const printLabel = (lot: any, itemName: string) => {
@@ -164,6 +174,7 @@ export default function RecentLotsList({ recentLots }: { recentLots: any[] }) {
                </tbody>
             </table>
          </div>
+         {isPending && <LoadingOverlay message="Actualizando datos de lote..." />}
       </div>
    )
 }

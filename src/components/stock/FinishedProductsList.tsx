@@ -97,19 +97,24 @@ export default function FinishedProductsList({ terminados, allLots }: { terminad
                                  <p className="text-sm text-slate-500 italic text-center py-2">No hay lotes activos. El stock puede haber sido cargado manualmente.</p>
                               ) : (
                                  <div className="space-y-3">
-                                    <div className="hidden md:grid grid-cols-12 text-xs font-bold text-slate-400 uppercase tracking-wider px-2">
-                                       <div className="col-span-3">Lote</div>
-                                       <div className="col-span-4">Variante/Sabor</div>
-                                       <div className="col-span-2 text-center">Restantes</div>
-                                       <div className="col-span-3 text-right">Acciones</div>
-                                    </div>
-                                    {itemLots.map((lot: any) => (
-                                       <div key={lot.id} className="flex flex-col md:grid md:grid-cols-12 items-start md:items-center bg-white p-3 md:p-3 rounded-lg border border-slate-100 shadow-sm gap-3 md:gap-0">
-                                          {/* Vista Mobile: Header, Vista PC: Columnas 1 y 2 */}
-                                          <div className="w-full md:col-span-7 flex justify-between items-center md:grid md:grid-cols-7">
-                                             <div className="md:col-span-3 font-mono font-bold text-orange-600 text-base md:text-sm">{lot.lot_code}</div>
-                                             <div className="md:col-span-4 text-sm font-medium text-slate-700">{lot.product_variants?.name || 'Base única'}</div>
-                                          </div>
+                                     <div className="hidden md:grid grid-cols-12 text-xs font-bold text-slate-400 uppercase tracking-wider px-2">
+                                        <div className="col-span-4">Variante/Sabor</div>
+                                        <div className="col-span-3">Lote</div>
+                                        <div className="col-span-2 text-center">Restantes</div>
+                                        <div className="col-span-3 text-right">Acciones</div>
+                                     </div>
+                                     {itemLots.map((lot: any) => (
+                                        <div key={lot.id} className="flex flex-col md:grid md:grid-cols-12 items-start md:items-center bg-white p-3 md:p-3 rounded-lg border border-slate-100 shadow-sm gap-3 md:gap-0">
+                                           {/* Vista Mobile: Header, Vista PC: Columnas 1 y 2 */}
+                                           <div className="w-full md:col-span-7 flex flex-col md:grid md:grid-cols-7 gap-1 md:gap-0">
+                                              <div className="md:col-span-4 font-bold text-slate-900 text-base md:text-sm">
+                                                 {lot.product_variants?.name || 'Base única'}
+                                              </div>
+                                              <div className="md:col-span-3 font-mono text-xs text-slate-400 font-medium md:flex md:items-center">
+                                                 <span className="md:hidden">Lote: </span>
+                                                 <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">{lot.lot_code}</span>
+                                              </div>
+                                           </div>
                                           
                                           {/* Vista Mobile: Detalles y Acciones, Vista PC: Columnas 3 y 4 */}
                                           <div className="w-full md:col-span-5 flex justify-between items-center md:grid md:grid-cols-5 pt-3 md:pt-0 border-t border-slate-50 md:border-none">

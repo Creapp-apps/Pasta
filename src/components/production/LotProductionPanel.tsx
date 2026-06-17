@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle2, Loader2, Printer, Tag } from 'lucide-react'
 import { produceLot } from '@/app/actions/lotProductionActions'
+import LoadingOverlay from '../layout/LoadingOverlay'
 
 export default function LotProductionPanel({ products, variants, userData }: { products: any[], variants: any[], userData: any }) {
+   const router = useRouter()
+   const [isPending, startTransition] = useTransition()
    const [selProduct, setSelProduct] = useState<string>('')
    const [selVariant, setSelVariant] = useState<string>('')
    const [qty, setQty] = useState('')
@@ -13,19 +17,26 @@ export default function LotProductionPanel({ products, variants, userData }: { p
 
    const productVariants = variants.filter((v: any) => v.product_id === selProduct)
 
-   const handleProduce = async () => {
+   const handleProduce = () => {
       if (!selProduct || !qty || Number(qty) <= 0) return alert("Seleccioná un producto y cantidad")
-      setLoading(true)
-      const res = await produceLot({
-         productId: selProduct,
-         variantId: selVariant || null,
-         quantity: Number(qty)
+      
+      startTransition(async () => {
+         setLoading(true)
+         const res = await produceLot({
+            productId: selProduct,
+            variantId: selVariant || null,
+            quantity: Number(qty)
+         })
+         setLoading(false)
+         if (res.error) {
+            alert(res.error)
+            return
+         }
+         setResult(res)
+         setSelProduct(''); setSelVariant(''); setQty('')
+         router.refresh()
+         setTimeout(() => setResult(null), 10000)
       })
-      setLoading(false)
-      if (res.error) return alert(res.error)
-      setResult(res)
-      setSelProduct(''); setSelVariant(''); setQty('')
-      setTimeout(() => setResult(null), 10000)
    }
 
    const printLabel = () => {
@@ -106,6 +117,7 @@ export default function LotProductionPanel({ products, variants, userData }: { p
                </button>
             </div>
          )}
+         {isPending && <LoadingOverlay message="Registrando lote de producción..." />}
       </div>
    )
 }
