@@ -73,8 +73,10 @@ export default function OrdersList({
       if (activeTab === 'active') {
          return o.status === 'pending' || o.status === 'on_route' || o.status === 'ready'
       } else {
-         if (!activeSession) return false
-         return o.status === 'delivered' && o.cash_session_id === activeSession.id
+         if (activeSession) {
+            return o.status === 'delivered' && o.cash_session_id === activeSession.id
+         }
+         return o.status === 'delivered'
       }
    })
 
@@ -513,7 +515,12 @@ export default function OrdersList({
                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
                   activeTab === 'delivered' ? 'bg-white/20 text-white' : 'bg-slate-250 text-slate-700'
                }`}>
-                  {orders.filter(o => o.status === 'delivered').length}
+                  {orders.filter(o => {
+                     if (activeSession) {
+                        return o.status === 'delivered' && o.cash_session_id === activeSession.id
+                     }
+                     return o.status === 'delivered'
+                  }).length}
                </span>
             </button>
          </div>
