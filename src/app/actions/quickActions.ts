@@ -141,13 +141,21 @@ export async function quickAdjustStockAction(payload: {
 
          // Descontar en FIFO de los lotes de producción para mantenerlos en sincronía
          let remainingQtyToDeduct = qty
-         const { data: activeLots } = await supabase
+         let query = supabase
             .from('production_lots')
             .select('id, quantity_remaining')
             .eq('product_id', productId)
             .eq('tenant_id', tenantId)
             .gt('quantity_remaining', 0)
             .order('elaboration_date', { ascending: true }) // FIFO: los más viejos primero
+
+         if (variantId) {
+            query = query.eq('variant_id', variantId)
+         } else {
+            query = query.is('variant_id', null)
+         }
+
+         const { data: activeLots } = await query
 
          if (activeLots && activeLots.length > 0) {
             for (const lot of activeLots) {

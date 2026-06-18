@@ -117,7 +117,7 @@ export default function BottomNav({
       setActiveModal(null)
       setIsOpen(false)
       setAddState({ productId: '', variantId: '', qty: '', applyRecipe: true, printLabel: false })
-      setSubState({ productId: '', qty: '', reason: 'adjustment' })
+      setSubState({ productId: '', variantId: '', qty: '', reason: 'adjustment' })
       setPurchState({ productId: '', qty: '', cost: '' })
       setOrderState({
          clientId: 'anonymous',
@@ -132,7 +132,7 @@ export default function BottomNav({
 
    // --- FORM STATES ---
    const [addState, setAddState] = useState({ productId: '', variantId: '', qty: '', applyRecipe: true, printLabel: false })
-   const [subState, setSubState] = useState({ productId: '', qty: '', reason: 'adjustment' })
+   const [subState, setSubState] = useState({ productId: '', variantId: '', qty: '', reason: 'adjustment' })
    const [purchState, setPurchState] = useState({ productId: '', qty: '', cost: '' })
    
    const [newClientMode, setNewClientMode] = useState(false)
@@ -203,11 +203,16 @@ export default function BottomNav({
        e.preventDefault()
        if (!subState.productId || !subState.qty || Number(subState.qty) <= 0) return showToast("Seleccioná producto/insumo y cantidad", "error")
        
+       const hasVariants = variants.filter(v => v.product_id === subState.productId).length > 0
+       if (hasVariants && !subState.variantId) {
+          return showToast("Seleccioná el sabor/variante", "error")
+       }
+
        startTransition(async () => {
           setSubmitting(true)
           const res = await quickAdjustStockAction({
              productId: subState.productId,
-             variantId: null,
+             variantId: subState.variantId || null,
              qty: Number(subState.qty),
              type: 'subtract',
              applyRecipe: false,
@@ -757,7 +762,7 @@ export default function BottomNav({
                               <label className="block text-sm font-bold text-slate-700 mb-1">Producto / Insumo</label>
                               <select 
                                  value={subState.productId} 
-                                 onChange={e => setSubState({ ...subState, productId: e.target.value })}
+                                 onChange={e => setSubState({ ...subState, productId: e.target.value, variantId: '' })}
                                  required
                                  className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-800"
                               >
@@ -770,6 +775,23 @@ export default function BottomNav({
                                  </optgroup>
                               </select>
                            </div>
+
+                           {subState.productId && variants.filter(v => v.product_id === subState.productId).length > 0 && (
+                              <div>
+                                 <label className="block text-sm font-bold text-slate-700 mb-1">Variante / Sabor</label>
+                                 <select 
+                                    value={subState.variantId} 
+                                    onChange={e => setSubState({ ...subState, variantId: e.target.value })}
+                                    required
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-slate-800"
+                                 >
+                                    <option value="">-- Seleccionar Variante --</option>
+                                    {variants.filter(v => v.product_id === subState.productId).map(v => (
+                                       <option key={v.id} value={v.id}>{v.name}</option>
+                                    ))}
+                                 </select>
+                              </div>
+                           )}
 
                            <div>
                               <label className="block text-sm font-bold text-slate-700 mb-1">Cantidad a Restar</label>
