@@ -116,7 +116,7 @@ export default function BottomNav({
    const closeModal = () => {
       setActiveModal(null)
       setIsOpen(false)
-      setAddState({ productId: '', variantId: '', qty: '', applyRecipe: true, printLabel: false })
+      setAddState({ productId: '', variantId: '', qty: '', applyRecipe: false, printLabel: false })
       setSubState({ productId: '', variantId: '', qty: '', reason: 'adjustment' })
       setPurchState({ productId: '', qty: '', cost: '' })
       setOrderState({
@@ -131,7 +131,7 @@ export default function BottomNav({
    }
 
    // --- FORM STATES ---
-   const [addState, setAddState] = useState({ productId: '', variantId: '', qty: '', applyRecipe: true, printLabel: false })
+   const [addState, setAddState] = useState({ productId: '', variantId: '', qty: '', applyRecipe: false, printLabel: false })
    const [subState, setSubState] = useState({ productId: '', variantId: '', qty: '', reason: 'adjustment' })
    const [purchState, setPurchState] = useState({ productId: '', qty: '', cost: '' })
    
