@@ -83,10 +83,17 @@ export default async function DashboardPage() {
   const { data: allVariants } = await supabase.from('product_variants').select('*').eq('tenant_id', tenantId)
   const { data: activeLots } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).gt('quantity_remaining', 0)
 
-  // Obtener ventas del día en hora local
-  const today = new Date()
-  today.setHours(0,0,0,0)
-  const todayIso = today.toISOString()
+  // Obtener ventas del día en la zona horaria de Argentina (UTC-3)
+  const now = new Date()
+  const arOffset = -3
+  const arTime = new Date(now.getTime() + (arOffset * 60 * 60 * 1000))
+  const arStartOfDay = new Date(Date.UTC(
+    arTime.getUTCFullYear(),
+    arTime.getUTCMonth(),
+    arTime.getUTCDate(),
+    3, 0, 0, 0
+  ))
+  const todayIso = arStartOfDay.toISOString()
 
   const { data: todayOrders } = await supabase
      .from('orders')

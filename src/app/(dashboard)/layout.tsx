@@ -64,10 +64,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
      const { data: lotsData } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).gt('quantity_remaining', 0)
      productionLots = lotsData || []
 
-     // Fetch metrics for Metrics Modal
-     const today = new Date()
-     today.setHours(0,0,0,0)
-     const todayIso = today.toISOString()
+     // Fetch metrics for Metrics Modal in Argentina timezone (UTC-3)
+     const now = new Date()
+     const arOffset = -3
+     const arTime = new Date(now.getTime() + (arOffset * 60 * 60 * 1000))
+     const arStartOfDay = new Date(Date.UTC(
+       arTime.getUTCFullYear(),
+       arTime.getUTCMonth(),
+       arTime.getUTCDate(),
+       3, 0, 0, 0
+     ))
+     const todayIso = arStartOfDay.toISOString()
 
      const { data: todayOrdData } = await supabase
         .from('orders')
