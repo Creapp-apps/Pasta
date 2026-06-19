@@ -92,10 +92,43 @@ export async function quickAdjustStockAction(payload: {
             operator_id: user.id
          })
 
-         // 4. Generar código de lote de forma automática para trazabilidad/etiquetado
+         // 4. Generar código de lote de forma automática y resolver posibles saldos negativos de lotes existentes (deficits)
          const { count } = await supabase.from('production_lots').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId)
          const lotNumber = (count || 0) + 1
          const lotCode = `LOT-${new Date().getFullYear()}-${String(lotNumber).padStart(4, '0')}`
+
+         let remainingToProduce = qty
+
+         // Buscar lotes del mismo producto/variante con cantidad restante menor a cero
+         let negLotsQuery = supabase
+            .from('production_lots')
+            .select('id, quantity_remaining')
+            .eq('tenant_id', tenantId)
+            .eq('product_id', productId)
+            .lt('quantity_remaining', 0)
+            .order('elaboration_date', { ascending: true })
+            .order('created_at', { ascending: true })
+
+         if (variantId) {
+            negLotsQuery = negLotsQuery.eq('variant_id', variantId)
+         } else {
+            negLotsQuery = negLotsQuery.is('variant_id', null)
+         }
+
+         const { data: negLots } = await negLotsQuery
+
+         for (const negLot of (negLots || [])) {
+            if (remainingToProduce <= 0) break
+            const deficit = Math.abs(Number(negLot.quantity_remaining))
+            const resolved = Math.min(remainingToProduce, deficit)
+
+            await supabase
+               .from('production_lots')
+               .update({ quantity_remaining: Number(negLot.quantity_remaining) + resolved })
+               .eq('id', negLot.id)
+
+            remainingToProduce -= resolved
+         }
 
          const { data: lot, error: lotErr } = await supabase.from('production_lots').insert({
             tenant_id: tenantId,
@@ -103,7 +136,7 @@ export async function quickAdjustStockAction(payload: {
             variant_id: variantId,
             lot_code: lotCode,
             quantity_produced: qty,
-            quantity_remaining: qty,
+            quantity_remaining: remainingToProduce,
             elaboration_date: new Date().toISOString().split('T')[0],
             operator_id: user.id
          }).select().single()

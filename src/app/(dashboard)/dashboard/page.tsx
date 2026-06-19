@@ -81,7 +81,7 @@ export default async function DashboardPage() {
 
   // Consultas para stock en tiempo real por sabor
   const { data: allVariants } = await supabase.from('product_variants').select('*').eq('tenant_id', tenantId)
-  const { data: activeLots } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).gt('quantity_remaining', 0)
+  const { data: activeLots } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).neq('quantity_remaining', 0)
 
   // Obtener ventas del día en la zona horaria de Argentina (UTC-3)
   const now = new Date()

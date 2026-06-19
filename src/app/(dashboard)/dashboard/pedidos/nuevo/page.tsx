@@ -13,7 +13,7 @@ export default async function NuevoPedidoPage() {
       supabase.from('products').select('*').eq('tenant_id', userData.tenant_id).eq('type', 'finished'),
       supabase.from('product_variants').select('*').eq('tenant_id', userData.tenant_id),
       supabase.from('clients').select('*').eq('tenant_id', userData.tenant_id),
-      supabase.from('production_lots').select('*').eq('tenant_id', userData.tenant_id).gt('quantity_remaining', 0)
+      supabase.from('production_lots').select('*').eq('tenant_id', userData.tenant_id).neq('quantity_remaining', 0)
    ])
 
    return (

@@ -154,9 +154,59 @@ export async function createOrder({
                remainingQtyToAllocate -= qtyToTake
             }
 
-            if (remainingQtyToAllocate > 0) {
-               // We don't throw an error for incomplete stock allocation to allow selling out of stock (overdrawing or negative stock isn't fully blocked here to avoid stopping sales), but we should probably alert.
-               // For this ERP, we just allocate what we can. 
+            if (remainingQtyToAllocate > 0 && scheduledDate) {
+               // Find the newest lot to drive negative
+               let newestQuery = supabase
+                  .from('production_lots')
+                  .select('id, quantity_remaining')
+                  .eq('tenant_id', userData.tenant_id)
+                  .eq('product_id', item.productId)
+                  .order('elaboration_date', { ascending: false })
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+
+               if (item.variantId) {
+                  newestQuery = newestQuery.eq('variant_id', item.variantId)
+               } else {
+                  newestQuery = newestQuery.is('variant_id', null)
+               }
+
+               const { data: newestLot } = await newestQuery
+
+               if (newestLot && newestLot.length > 0) {
+                  const lot = newestLot[0]
+                  await supabase.from('order_lot_allocations').insert({
+                     order_item_id: orderItem.id,
+                     lot_id: lot.id,
+                     quantity_allocated: remainingQtyToAllocate
+                  })
+
+                  await supabase
+                     .from('production_lots')
+                     .update({ quantity_remaining: Number(lot.quantity_remaining) - remainingQtyToAllocate })
+                     .eq('id', lot.id)
+               } else {
+                  // Create a virtual/deficit lot
+                  const lotCode = `LOT-DEF-${new Date().getFullYear()}-${Math.floor(Math.random()*10000)}`
+                  const { data: defLot, error: defErr } = await supabase.from('production_lots').insert({
+                     tenant_id: userData.tenant_id,
+                     product_id: item.productId,
+                     variant_id: item.variantId || null,
+                     lot_code: lotCode,
+                     quantity_produced: 0,
+                     quantity_remaining: -remainingQtyToAllocate,
+                     elaboration_date: new Date().toISOString().split('T')[0],
+                     operator_id: user.id
+                  }).select('id').single()
+
+                  if (defErr) throw new Error("Error registrando lote virtual: " + defErr.message)
+
+                  await supabase.from('order_lot_allocations').insert({
+                     order_item_id: orderItem.id,
+                     lot_id: defLot.id,
+                     quantity_allocated: remainingQtyToAllocate
+                  })
+               }
             }
          }
       }
@@ -249,12 +299,39 @@ export async function deleteOrderAction(orderId: string) {
       // 2. Fetch order items to restore stock
       const { data: items, error: itemsErr } = await supabase
          .from('order_items')
-         .select('product_id, quantity')
+         .select('id, product_id, quantity')
          .eq('order_id', orderId)
 
       if (itemsErr) throw new Error(itemsErr.message)
 
       if (items && items.length > 0) {
+         // Restore production lots remaining quantities
+         const itemIds = items.map(item => item.id)
+         const { data: allocations, error: allocErr } = await supabase
+            .from('order_lot_allocations')
+            .select('lot_id, quantity_allocated')
+            .in('order_item_id', itemIds)
+
+         if (allocErr) throw new Error(allocErr.message)
+
+         if (allocations && allocations.length > 0) {
+            for (const alloc of allocations) {
+               const { data: lot } = await supabase
+                  .from('production_lots')
+                  .select('quantity_remaining')
+                  .eq('id', alloc.lot_id)
+                  .single()
+
+               if (lot) {
+                  const restoredLotQty = Number(lot.quantity_remaining || 0) + Number(alloc.quantity_allocated)
+                  await supabase
+                     .from('production_lots')
+                     .update({ quantity_remaining: restoredLotQty })
+                     .eq('id', alloc.lot_id)
+               }
+            }
+         }
+
          for (const item of items) {
             // Restore stock of product
             const { data: prod } = await supabase
@@ -314,10 +391,39 @@ export async function updateOrderItemsAction(
       // 2. Fetch original order items to compute stock changes
       const { data: oldItems, error: oldErr } = await supabase
          .from('order_items')
-         .select('product_id, variant_id, quantity')
+         .select('id, product_id, variant_id, quantity')
          .eq('order_id', orderId)
 
       if (oldErr) throw new Error(oldErr.message)
+
+      // RESTORE old lot allocations back to production lots
+      if (oldItems && oldItems.length > 0) {
+         const oldItemIds = oldItems.map(item => item.id)
+         const { data: oldAllocations, error: oldAllocErr } = await supabase
+            .from('order_lot_allocations')
+            .select('lot_id, quantity_allocated')
+            .in('order_item_id', oldItemIds)
+
+         if (oldAllocErr) throw new Error(oldAllocErr.message)
+
+         if (oldAllocations && oldAllocations.length > 0) {
+            for (const alloc of oldAllocations) {
+               const { data: lot } = await supabase
+                  .from('production_lots')
+                  .select('quantity_remaining')
+                  .eq('id', alloc.lot_id)
+                  .single()
+
+               if (lot) {
+                  const restoredLotQty = Number(lot.quantity_remaining || 0) + Number(alloc.quantity_allocated)
+                  await supabase
+                     .from('production_lots')
+                     .update({ quantity_remaining: restoredLotQty })
+                     .eq('id', alloc.lot_id)
+               }
+            }
+         }
+      }
 
       // Fetch order's scheduled_date to determine if we allow negative stock
       const { data: orderData } = await supabase
@@ -410,9 +516,9 @@ export async function updateOrderItemsAction(
 
       if (clearErr) throw new Error(clearErr.message)
 
-      // 4. Insert new order items
+      // 4. Insert new order items & allocate lots (FIFO)
       for (const item of updatedItems) {
-         const { error: insErr } = await supabase
+         const { data: orderItem, error: insErr } = await supabase
             .from('order_items')
             .insert({
                order_id: orderId,
@@ -422,8 +528,110 @@ export async function updateOrderItemsAction(
                unit_price: item.unitPrice,
                subtotal: item.qty * item.unitPrice
             })
+            .select('id')
+            .single()
 
          if (insErr) throw new Error(insErr.message)
+
+         let remainingQtyToAllocate = item.qty
+
+         // Fetch oldest active lots for this exact product+variant combination
+         let query = supabase
+            .from('production_lots')
+            .select('id, quantity_remaining')
+            .eq('tenant_id', userData.tenant_id)
+            .eq('product_id', item.productId)
+            .gt('quantity_remaining', 0)
+            .order('elaboration_date', { ascending: true }) // Oldest first
+            .order('created_at', { ascending: true })
+         
+         if (item.variantId) {
+            query = query.eq('variant_id', item.variantId)
+         } else {
+            query = query.is('variant_id', null)
+         }
+
+         const { data: availableLots, error: lotsErr } = await query
+         if (lotsErr) throw new Error(`Error buscando lotes FIFO: ${lotsErr.message}`)
+
+         for (const lot of (availableLots || [])) {
+            if (remainingQtyToAllocate <= 0) break
+
+            const lotQty = Number(lot.quantity_remaining)
+            if (lotQty <= 0) continue
+
+            const qtyToTake = Math.min(remainingQtyToAllocate, lotQty)
+            
+            // Register allocation
+            await supabase.from('order_lot_allocations').insert({
+               order_item_id: orderItem.id,
+               lot_id: lot.id,
+               quantity_allocated: qtyToTake
+            })
+
+            await supabase
+               .from('production_lots')
+               .update({ quantity_remaining: Math.max(0, lotQty - qtyToTake) })
+               .eq('id', lot.id)
+
+            remainingQtyToAllocate -= qtyToTake
+         }
+
+         // If we still have quantity left to allocate, and it's a scheduled order, drive stock negative
+         if (remainingQtyToAllocate > 0 && isScheduled) {
+            // Find the newest lot to drive negative
+            let newestQuery = supabase
+               .from('production_lots')
+               .select('id, quantity_remaining')
+               .eq('tenant_id', userData.tenant_id)
+               .eq('product_id', item.productId)
+               .order('elaboration_date', { ascending: false })
+               .order('created_at', { ascending: false })
+               .limit(1)
+
+            if (item.variantId) {
+               newestQuery = newestQuery.eq('variant_id', item.variantId)
+            } else {
+               newestQuery = newestQuery.is('variant_id', null)
+            }
+
+            const { data: newestLot } = await newestQuery
+
+            if (newestLot && newestLot.length > 0) {
+               const lot = newestLot[0]
+               await supabase.from('order_lot_allocations').insert({
+                  order_item_id: orderItem.id,
+                  lot_id: lot.id,
+                  quantity_allocated: remainingQtyToAllocate
+               })
+
+               await supabase
+                  .from('production_lots')
+                  .update({ quantity_remaining: Number(lot.quantity_remaining) - remainingQtyToAllocate })
+                  .eq('id', lot.id)
+            } else {
+               // Create a virtual/deficit lot
+               const lotCode = `LOT-DEF-${new Date().getFullYear()}-${Math.floor(Math.random()*10000)}`
+               const { data: defLot, error: defErr } = await supabase.from('production_lots').insert({
+                  tenant_id: userData.tenant_id,
+                  product_id: item.productId,
+                  variant_id: item.variantId || null,
+                  lot_code: lotCode,
+                  quantity_produced: 0,
+                  quantity_remaining: -remainingQtyToAllocate,
+                  elaboration_date: new Date().toISOString().split('T')[0],
+                  operator_id: user.id
+               }).select('id').single()
+
+               if (defErr) throw new Error("Error registrando lote virtual: " + defErr.message)
+
+               await supabase.from('order_lot_allocations').insert({
+                  order_item_id: orderItem.id,
+                  lot_id: defLot.id,
+                  quantity_allocated: remainingQtyToAllocate
+               })
+            }
+         }
       }
 
       // 5. Update order total

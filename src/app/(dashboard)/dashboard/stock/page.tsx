@@ -22,7 +22,7 @@ export default async function StockCentralPage() {
       .from('production_lots')
       .select('*, products(name), product_variants(name)')
       .eq('tenant_id', userData.tenant_id)
-      .gt('quantity_remaining', 0)
+      .neq('quantity_remaining', 0)
       .order('elaboration_date', { ascending: false })
 
    const insumos = allProducts?.filter(p => p.type === 'raw_material') || []

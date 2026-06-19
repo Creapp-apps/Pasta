@@ -61,7 +61,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
      const { data: varData } = await supabase.from('product_variants').select('*').eq('tenant_id', tenantId)
      variants = varData || []
 
-     const { data: lotsData } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).gt('quantity_remaining', 0)
+     const { data: lotsData } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).neq('quantity_remaining', 0)
      productionLots = lotsData || []
 
      // Fetch metrics for Metrics Modal in Argentina timezone (UTC-3)
