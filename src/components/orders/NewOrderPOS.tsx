@@ -163,7 +163,7 @@ export default function NewOrderPOS({
                                      >
                                         <div className="space-y-0.5 pr-2">
                                            <p className="font-bold text-slate-700 text-sm group-hover:text-slate-900 leading-tight">{v.name}</p>
-                                           <p className="text-[10px] font-bold text-slate-400">
+                                           <p className={`text-[10px] font-bold ${varStock < 0 ? 'text-red-500' : 'text-slate-400'}`}>
                                               Stock: {varStock} {p.unit_of_measure || 'u.'}
                                            </p>
                                         </div>

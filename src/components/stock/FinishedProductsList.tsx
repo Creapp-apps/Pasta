@@ -126,7 +126,7 @@ export default function FinishedProductsList({ terminados, allLots }: { terminad
                                                       className="w-16 px-2 py-1 border border-orange-300 rounded font-bold text-center text-sm focus:outline-none focus:ring-2"
                                                    />
                                                 ) : (
-                                                   <span className="font-bold text-lg text-slate-900">{lot.quantity_remaining}</span>
+                                                   <span className={`font-bold text-lg ${Number(lot.quantity_remaining) < 0 ? 'text-red-500 font-extrabold' : 'text-slate-900'}`}>{lot.quantity_remaining}</span>
                                                 )}
                                              </div>
 

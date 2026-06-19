@@ -86,7 +86,7 @@ export default function RecentLotsList({ recentLots }: { recentLots: any[] }) {
                            className="w-20 px-2 py-1 border border-orange-300 rounded font-bold text-center text-sm focus:outline-none focus:ring-2"
                         />
                      ) : (
-                        <span className="font-black text-slate-900 text-xl">{lot.quantity_remaining}</span>
+                        <span className={`font-black text-xl ${Number(lot.quantity_remaining) < 0 ? 'text-red-500 font-extrabold' : 'text-slate-900'}`}>{lot.quantity_remaining}</span>
                      )}
                   </div>
 
@@ -142,7 +142,7 @@ export default function RecentLotsList({ recentLots }: { recentLots: any[] }) {
                                  className="w-16 px-2 py-1 border border-orange-300 rounded font-bold text-center text-sm focus:outline-none focus:ring-2"
                               />
                            ) : (
-                              <span className="font-bold text-slate-900">{lot.quantity_remaining}</span>
+                              <span className={`font-bold ${Number(lot.quantity_remaining) < 0 ? 'text-red-500 font-extrabold' : 'text-slate-900'}`}>{lot.quantity_remaining}</span>
                            )}
                         </td>
 

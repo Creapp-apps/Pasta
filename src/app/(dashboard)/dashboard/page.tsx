@@ -183,7 +183,7 @@ export default async function DashboardPage() {
                                         return (
                                            <div key={v.id} className="flex justify-between items-center bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm text-xs" title={v.name}>
                                               <span className="font-bold text-slate-600 truncate pr-2">{v.name.split(' (')[0]}</span>
-                                              <span className={`font-mono font-black ${varStock > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                              <span className={`font-mono font-black ${varStock > 0 ? 'text-emerald-600' : varStock < 0 ? 'text-red-500 font-extrabold' : 'text-slate-400'}`}>
                                                  {varStock} {prod.unit_of_measure}
                                               </span>
                                            </div>
