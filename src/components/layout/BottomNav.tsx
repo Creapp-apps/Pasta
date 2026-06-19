@@ -125,7 +125,8 @@ export default function BottomNav({
          newClientPhone: '',
          newClientAddress: '',
          items: [{ productId: '', qty: 1, unitPrice: 0 }],
-         paymentMethod: 'cash'
+         paymentMethod: 'cash',
+         scheduledDate: ''
       })
       setNewClientMode(false)
    }
@@ -143,13 +144,15 @@ export default function BottomNav({
       newClientAddress: string
       items: { productId: string; variantId?: string; qty: number; unitPrice: number }[]
       paymentMethod: string
+      scheduledDate?: string
    }>({
       clientId: 'anonymous',
       newClientName: '',
       newClientPhone: '',
       newClientAddress: '',
       items: [{ productId: '', qty: 1, unitPrice: 0 }],
-      paymentMethod: 'cash'
+      paymentMethod: 'cash',
+      scheduledDate: ''
    })
 
     // --- ACTIONS ---
@@ -294,7 +297,8 @@ export default function BottomNav({
              })),
              paymentMethod: orderState.paymentMethod,
              isManualLotSelection: false, // FIFO automático
-             totalCalc
+             totalCalc,
+             scheduledDate: orderState.scheduledDate || undefined
           })
  
           setSubmitting(false)
@@ -1143,6 +1147,15 @@ export default function BottomNav({
                                  <span className="text-xl font-black text-orange-500">
                                     ${orderState.items.reduce((acc, curr) => acc + (curr.qty * curr.unitPrice), 0).toLocaleString('es-AR')}
                                  </span>
+                              </div>
+                              <div className="col-span-2 border-t border-slate-800 pt-3">
+                                 <span className="text-xs text-slate-400 font-bold block mb-1">FECHA DE ENTREGA (OPCIONAL)</span>
+                                 <input 
+                                    type="date"
+                                    value={orderState.scheduledDate || ''}
+                                    onChange={e => setOrderState({ ...orderState, scheduledDate: e.target.value })}
+                                    className="bg-slate-800 text-white font-bold text-sm rounded-lg px-3 py-1.5 focus:outline-none border-none w-full cursor-pointer"
+                                 />
                               </div>
                            </div>
 

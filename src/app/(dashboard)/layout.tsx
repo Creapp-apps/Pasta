@@ -75,12 +75,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
        3, 0, 0, 0
      ))
      const todayIso = arStartOfDay.toISOString()
+     const arTodayStr = arStartOfDay.toISOString().split('T')[0]
 
      const { data: todayOrdData } = await supabase
         .from('orders')
         .select('total_calc, payment_method, status, cash_session_id')
         .eq('tenant_id', tenantId)
         .gte('created_at', todayIso)
+        .or(`scheduled_date.is.null,scheduled_date.lte.${arTodayStr}`)
      todayOrders = todayOrdData || []
 
      const { data: todayWstData } = await supabase

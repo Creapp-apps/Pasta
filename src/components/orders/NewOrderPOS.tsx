@@ -21,6 +21,7 @@ export default function NewOrderPOS({
    const [cartMap, setCartMap] = useState<any>({})
    const [selectedClient, setSelectedClient] = useState('')
    const [paymentMethod, setPaymentMethod] = useState('cash')
+   const [scheduledDate, setScheduledDate] = useState('')
    const [loading, setLoading] = useState(false)
    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
 
@@ -89,7 +90,8 @@ export default function NewOrderPOS({
             })),
             paymentMethod,
             isManualLotSelection: isManualLots,
-            totalCalc: cartTotal
+            totalCalc: cartTotal,
+            scheduledDate: scheduledDate || undefined
          })
          setLoading(false)
 
@@ -97,6 +99,7 @@ export default function NewOrderPOS({
          
          setCartMap({})
          setSelectedClient('')
+         setScheduledDate('')
          showToast(`¡Pedido #${res.orderId.substring(0,6)} creado y descontado con éxito!`, 'success')
          router.refresh()
       })
@@ -281,6 +284,15 @@ export default function NewOrderPOS({
                         <option value="transfer">Transferencia Bancaria 🏦</option>
                         <option value="mercado_pago">Mercado Pago 📲</option>
                      </select>
+                  </div>
+                  <div>
+                     <label className="block text-xs font-bold text-slate-500 mb-1 tracking-wider uppercase">Fecha de Entrega (Opcional)</label>
+                     <input 
+                        type="date" 
+                        value={scheduledDate} 
+                        onChange={e => setScheduledDate(e.target.value)} 
+                        className="w-full bg-slate-800 border-2 border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition text-sm cursor-pointer"
+                     />
                   </div>
                </div>
 

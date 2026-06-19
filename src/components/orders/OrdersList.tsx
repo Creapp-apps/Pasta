@@ -573,6 +573,11 @@ export default function OrdersList({
                   </div>
                   <div>
                      <p className="font-semibold text-slate-700 text-lg">{o.clients?.name || 'Consumidor Final (Anónimo)'}</p>
+                     {o.scheduled_date && (
+                        <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-lg w-max font-bold mt-1 inline-flex items-center gap-1 shadow-sm">
+                           📅 Entrega: {new Date(o.scheduled_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                     )}
                      {o.clients?.address && (
                         <p className="text-xs text-slate-400 font-bold mt-1 inline-flex items-center gap-1">
                            📍 {o.clients.address}
@@ -634,7 +639,14 @@ export default function OrdersList({
                            />
                         </td>
                         <td className="p-4 font-mono font-bold text-slate-800">{formatOrderNumber(o)}</td>
-                        <td className="p-4 font-semibold text-slate-700">{o.clients?.name || 'Consumidor Final'}</td>
+                        <td className="p-4 font-semibold text-slate-700">
+                           <div>{o.clients?.name || 'Consumidor Final'}</div>
+                           {o.scheduled_date && (
+                              <span className="inline-block text-[10px] text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-lg font-bold mt-1 shadow-sm">
+                                 📅 {new Date(o.scheduled_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                              </span>
+                           )}
+                        </td>
                         <td className="p-4 text-slate-600 text-sm font-medium">
                            {o.clients?.address ? (
                               <span className="inline-flex items-center gap-1">
@@ -713,6 +725,11 @@ export default function OrdersList({
                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Información de Entrega</h4>
                            <div>
                               <p className="font-extrabold text-slate-800 text-lg">{selectedOrder.clients?.name || 'Consumidor Final (Anónimo)'}</p>
+                              {selectedOrder.scheduled_date && (
+                                 <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-xl w-max font-bold mt-1 shadow-sm">
+                                    📅 Entrega Programada: {new Date(selectedOrder.scheduled_date + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                 </p>
+                              )}
                               {selectedOrder.clients?.phone_number && (
                                  <a href={`tel:${selectedOrder.clients.phone_number}`} className="text-sm font-bold text-orange-500 hover:underline inline-flex items-center gap-1.5 mt-1">
                                     <Phone size={14}/> {selectedOrder.clients.phone_number}

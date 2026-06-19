@@ -173,6 +173,8 @@ export async function getTodayDetailedMetricsAction({
 
       let startDateIso: string
       let endDateIso: string
+      let sDateStr = startDateStr || ''
+      let eDateStr = endDateStr || ''
       const now = new Date()
 
       if (filterType === 'month') {
@@ -180,6 +182,8 @@ export async function getTodayDetailedMetricsAction({
          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
          startDateIso = startOfMonth.toISOString()
          endDateIso = endOfMonth.toISOString()
+         sDateStr = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-01`
+         eDateStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`
       } else if (filterType === 'custom' && startDateStr && endDateStr) {
          const sParts = startDateStr.split('-')
          const start = new Date(Number(sParts[0]), Number(sParts[1]) - 1, Number(sParts[2]), 0, 0, 0, 0)
@@ -187,12 +191,31 @@ export async function getTodayDetailedMetricsAction({
          const end = new Date(Number(eParts[0]), Number(eParts[1]) - 1, Number(eParts[2]), 23, 59, 59, 999)
          startDateIso = start.toISOString()
          endDateIso = end.toISOString()
+         sDateStr = startDateStr
+         eDateStr = endDateStr
       } else {
          // filterType === 'day'
-         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-         const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-         startDateIso = startOfDay.toISOString()
-         endDateIso = endOfDay.toISOString()
+         // Argentina timezone (UTC-3)
+         const arOffset = -3
+         const arTime = new Date(now.getTime() + (arOffset * 60 * 60 * 1000))
+         const arStartOfDay = new Date(Date.UTC(
+            arTime.getUTCFullYear(),
+            arTime.getUTCMonth(),
+            arTime.getUTCDate(),
+            3, 0, 0, 0
+         ))
+         startDateIso = arStartOfDay.toISOString()
+         const arEndOfDay = new Date(Date.UTC(
+            arTime.getUTCFullYear(),
+            arTime.getUTCMonth(),
+            arTime.getUTCDate(),
+            26, 59, 59, 999
+         ))
+         endDateIso = arEndOfDay.toISOString()
+         
+         const todayStr = arStartOfDay.toISOString().split('T')[0]
+         sDateStr = todayStr
+         eDateStr = todayStr
       }
 
       // 1. Obtener la sesión de caja activa
@@ -212,6 +235,7 @@ export async function getTodayDetailedMetricsAction({
             payment_method,
             status,
             created_at,
+            scheduled_date,
             order_items (
                id,
                product_id,
@@ -228,9 +252,7 @@ export async function getTodayDetailedMetricsAction({
       if (filterType === 'day' && activeSession) {
          ordersQuery = ordersQuery.eq('cash_session_id', activeSession.id)
       } else {
-         ordersQuery = ordersQuery
-            .gte('created_at', startDateIso)
-            .lte('created_at', endDateIso)
+         ordersQuery = ordersQuery.or(`and(scheduled_date.not.is.null,scheduled_date.gte.${sDateStr},scheduled_date.lte.${eDateStr}),and(scheduled_date.is.null,created_at.gte.${startDateIso},created_at.lte.${endDateIso})`)
       }
 
       const { data: orders, error: ordersErr } = await ordersQuery

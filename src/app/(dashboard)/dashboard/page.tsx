@@ -94,12 +94,14 @@ export default async function DashboardPage() {
     3, 0, 0, 0
   ))
   const todayIso = arStartOfDay.toISOString()
+  const arTodayStr = arStartOfDay.toISOString().split('T')[0]
 
   const { data: todayOrders } = await supabase
      .from('orders')
      .select('total_calc')
      .eq('tenant_id', tenantId)
      .gte('created_at', todayIso)
+     .or(`scheduled_date.is.null,scheduled_date.lte.${arTodayStr}`)
 
   const shiftSales = todayOrders?.reduce((acc, curr) => acc + Number(curr.total_calc || 0), 0) || 0
 

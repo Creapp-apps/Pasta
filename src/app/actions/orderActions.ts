@@ -8,7 +8,8 @@ export async function createOrder({
    items,
    paymentMethod,
    isManualLotSelection,
-   totalCalc
+   totalCalc,
+   scheduledDate
 }: {
    clientId: string | null,
    items: {
@@ -20,7 +21,8 @@ export async function createOrder({
    }[],
    paymentMethod: string,
    isManualLotSelection: boolean,
-   totalCalc: number
+   totalCalc: number,
+   scheduledDate?: string
 }) {
    const supabase = await createClient()
    const { data: { user } } = await supabase.auth.getUser()
@@ -38,7 +40,8 @@ export async function createOrder({
             client_id: clientId,
             status: 'pending',
             payment_method: paymentMethod,
-            total_calc: totalCalc
+            total_calc: totalCalc,
+            scheduled_date: scheduledDate || null
          }).select('id').single()
 
       if (orderErr) throw new Error(`Error creando orden: ${orderErr.message}`)
