@@ -67,7 +67,9 @@ export async function createOrder({
          // Descontar del stock físico principal del producto
          const { data: prod } = await supabase.from('products').select('current_stock').eq('id', item.productId).single()
          if (prod) {
-            const newStock = Math.max(0, Number(prod.current_stock || 0) - item.qty)
+            const newStock = scheduledDate
+               ? Number(prod.current_stock || 0) - item.qty
+               : Math.max(0, Number(prod.current_stock || 0) - item.qty)
             await supabase.from('products').update({ current_stock: newStock }).eq('id', item.productId)
          }
 
@@ -317,6 +319,15 @@ export async function updateOrderItemsAction(
 
       if (oldErr) throw new Error(oldErr.message)
 
+      // Fetch order's scheduled_date to determine if we allow negative stock
+      const { data: orderData } = await supabase
+         .from('orders')
+         .select('scheduled_date')
+         .eq('id', orderId)
+         .single()
+      
+      const isScheduled = !!orderData?.scheduled_date
+
       // Calculate stock adjustments
       const stockAdjustments: { productId: string, qtyChange: number }[] = []
 
@@ -371,7 +382,9 @@ export async function updateOrderItemsAction(
             .single()
 
          if (prod) {
-            const newStock = Math.max(0, Number(prod.current_stock || 0) - adj.qtyChange)
+            const newStock = isScheduled
+               ? Number(prod.current_stock || 0) - adj.qtyChange
+               : Math.max(0, Number(prod.current_stock || 0) - adj.qtyChange)
             await supabase
                .from('products')
                .update({ current_stock: newStock })
