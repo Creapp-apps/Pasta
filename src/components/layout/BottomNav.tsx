@@ -139,6 +139,31 @@ export default function BottomNav({
       } else {
          finishedProducts.forEach((p: any) => {
             text += `• *${p.name}*: ${p.current_stock} ${p.unit_of_measure}\n`
+
+            // Get active lots of this product to breakdown by variant
+            const itemLots = productionLots.filter((l: any) => l.product_id === p.id)
+            if (itemLots.length > 0) {
+               const variantStockMap: { [key: string]: { name: string; qty: number } } = {}
+
+               itemLots.forEach((lot: any) => {
+                  const variantId = lot.variant_id
+                  const variant = variants.find((v: any) => v.id === variantId)
+                  const vName = variant ? variant.name : 'Base única'
+
+                  const key = variantId || 'base'
+                  if (!variantStockMap[key]) {
+                     variantStockMap[key] = { name: vName, qty: 0 }
+                  }
+                  variantStockMap[key].qty += Number(lot.quantity_remaining)
+               })
+
+               // Append breakdown lines for variants with stock > 0
+               Object.values(variantStockMap).forEach((vStock) => {
+                  if (vStock.qty > 0) {
+                     text += `  └ _${vStock.name}_: ${vStock.qty} ${p.unit_of_measure}\n`
+                  }
+               })
+            }
          })
       }
 
