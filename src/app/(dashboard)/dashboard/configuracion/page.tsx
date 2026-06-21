@@ -18,7 +18,7 @@ export default async function ConfiguracionPage() {
 
    const { data: tenantData } = await supabase
       .from('tenants')
-      .select('name, logo_url')
+      .select('name, logo_url, whatsapp_contacts')
       .eq('id', userData.tenant_id)
       .single()
 

@@ -51,6 +51,7 @@ export default function BottomNav({
    const [activeModal, setActiveModal] = useState<'add' | 'subtract' | 'order' | 'purchase' | null>(null)
    const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false)
    const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false)
+   const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState(false)
    const [submitting, setSubmitting] = useState(false)
    const [isPending, startTransition] = useTransition()
    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
@@ -112,6 +113,52 @@ export default function BottomNav({
    // Lists
    const finishedProducts = products.filter(p => p.type === 'finished')
    const rawMaterials = products.filter(p => p.type === 'raw_material')
+
+   const handleSendWhatsappStock = (contact: { name: string; phone: string }) => {
+      let phone = contact.phone.replace(/\D/g, '')
+      if (!phone.startsWith('54')) {
+         if (phone.length === 10) {
+            phone = '549' + phone
+         } else {
+            phone = '54' + phone
+         }
+      }
+
+      const dateStr = new Date().toLocaleString('es-AR', {
+         timeZone: 'America/Argentina/Buenos_Aires',
+         dateStyle: 'short',
+         timeStyle: 'short'
+      })
+
+      let text = `📦 *STOCK CENTRAL - ${tenantData?.name || 'FÁBRICA'}*\n`
+      text += `📅 _Fecha/Hora: ${dateStr}_\n\n`
+
+      text += `🍝 *PRODUCTOS TERMINADOS:*\n`
+      if (finishedProducts.length === 0) {
+         text += `_No hay productos terminados cargados_\n`
+      } else {
+         finishedProducts.forEach((p: any) => {
+            text += `• *${p.name}*: ${p.current_stock} ${p.unit_of_measure}\n`
+         })
+      }
+
+      text += `\n🌾 *MATERIAS PRIMAS:*\n`
+      if (rawMaterials.length === 0) {
+         text += `_No hay materias primas cargadas_\n`
+      } else {
+         rawMaterials.forEach((p: any) => {
+            text += `• *${p.name}*: ${p.current_stock} ${p.unit_of_measure}\n`
+         })
+      }
+
+      text += `\n_Enviado desde el Sistema de Gestión Fábrica de Pastas_ 🍝`
+
+      const encodedText = encodeURIComponent(text)
+      const url = `https://wa.me/${phone}?text=${encodedText}`
+
+      window.open(url, '_blank')
+      setIsWhatsappModalOpen(false)
+   }
 
    const closeModal = () => {
       setActiveModal(null)
@@ -541,6 +588,17 @@ export default function BottomNav({
          {/* Speed Dial Menu for Employees */}
          {isOpen && (
             <div className="fixed bottom-24 left-0 right-0 mx-auto w-max md:left-auto md:right-6 md:mx-0 z-50 flex flex-col items-center md:items-end gap-3 animate-in fade-in slide-in-from-bottom-5 duration-200">
+               {/* Botón Enviar Stock por WhatsApp */}
+               <button 
+                  onClick={() => { setIsOpen(false); setIsWhatsappModalOpen(true) }} 
+                  className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg font-bold text-sm transition-all cursor-pointer"
+               >
+                  <svg className="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                     <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.978L2 22l5.233-1.372a9.95 9.95 0 0 0 4.773 1.218h.004c5.505 0 9.988-4.478 9.989-9.984 0-2.669-1.037-5.176-2.922-7.062A9.92 9.92 0 0 0 12.012 2zm5.727 14.072c-.253.715-1.485 1.4-2.032 1.488-.49.079-.967.33-3.136-.575-2.775-1.157-4.577-3.988-4.716-4.172-.14-.185-1.138-1.514-1.138-2.886 0-1.372.714-2.043.968-2.316.253-.274.56-.342.746-.342.188 0 .376.002.538.01.168.007.394-.063.616.474.226.547.778 1.897.844 2.032.067.137.112.296.021.479-.09.182-.135.296-.271.455-.136.16-.285.358-.408.48-.137.137-.28.287-.12.563.16.273.71 1.171 1.523 1.893.813.723 1.498.946 1.708 1.052.211.107.334.09.46.046.126-.045.547-.638.694-.856.147-.217.294-.182.497-.107.202.076 1.285.606 1.507.72.221.112.368.167.424.265.056.097.056.564-.197 1.279z"/>
+                  </svg>
+                  Enviar Stock (WhatsApp)
+               </button>
+
                {/* Botón Compra de Insumo */}
                <button 
                   onClick={() => setActiveModal('purchase')} 
@@ -1616,6 +1674,69 @@ export default function BottomNav({
                         </button>
                      </div>
 
+                  </div>
+               </div>
+            </Portal>
+         )}
+
+         {/* WhatsApp Stock Send Modal */}
+         {isWhatsappModalOpen && (
+            <Portal>
+               <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[75vh] animate-in slide-in-from-bottom-8 duration-300 border border-slate-100">
+                     
+                     {/* Modal Header */}
+                     <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                        <div className="text-left">
+                           <h3 className="font-extrabold text-xl text-slate-800 flex items-center gap-2">
+                              <svg className="w-5 h-5 text-emerald-500 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                 <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984a9.96 9.96 0 0 0 1.333 4.978L2 22l5.233-1.372a9.95 9.95 0 0 0 4.773 1.218h.004c5.505 0 9.988-4.478 9.989-9.984 0-2.669-1.037-5.176-2.922-7.062A9.92 9.92 0 0 0 12.012 2zm5.727 14.072c-.253.715-1.485 1.4-2.032 1.488-.49.079-.967.33-3.136-.575-2.775-1.157-4.577-3.988-4.716-4.172-.14-.185-1.138-1.514-1.138-2.886 0-1.372.714-2.043.968-2.316.253-.274.56-.342.746-.342.188 0 .376.002.538.01.168.007.394-.063.616.474.226.547.778 1.897.844 2.032.067.137.112.296.021.479-.09.182-.135.296-.271.455-.136.16-.285.358-.408.48-.137.137-.28.287-.12.563.16.273.71 1.171 1.523 1.893.813.723 1.498.946 1.708 1.052.211.107.334.09.46.046.126-.045.547-.638.694-.856.147-.217.294-.182.497-.107.202.076 1.285.606 1.507.72.221.112.368.167.424.265.056.097.056.564-.197 1.279z"/>
+                              </svg>
+                              Enviar Stock por WhatsApp
+                           </h3>
+                           <p className="text-xs text-slate-500 font-semibold mt-1">
+                              Seleccioná el destinatario del reporte
+                           </p>
+                        </div>
+                        <button 
+                           onClick={() => setIsWhatsappModalOpen(false)} 
+                           className="p-2 text-slate-400 hover:text-slate-655 hover:bg-slate-100 rounded-full transition cursor-pointer"
+                        >
+                           <X size={20}/>
+                        </button>
+                     </div>
+
+                     {/* Modal Body */}
+                     <div className="p-6 overflow-y-auto space-y-4">
+                        <div className="space-y-2">
+                           {(() => {
+                              const dbContacts = tenantData?.whatsapp_contacts
+                              const list = Array.isArray(dbContacts) && dbContacts.length > 0 
+                                 ? dbContacts 
+                                 : [{ name: 'Celular de Reporte (Por Defecto)', phone: '1123446948' }]
+
+                              return list.map((contact: any, index: number) => (
+                                 <button
+                                    key={index}
+                                    onClick={() => handleSendWhatsappStock(contact)}
+                                    className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-250 border border-slate-100 rounded-2xl transition-all text-left font-bold group cursor-pointer"
+                                 >
+                                    <div className="flex flex-col flex-1 mr-4">
+                                       <span className="text-slate-800 text-sm group-hover:text-emerald-700 truncate">{contact.name}</span>
+                                       <span className="text-xs text-slate-500 font-mono mt-0.5">{contact.phone}</span>
+                                    </div>
+                                    <span className="text-xs px-3 py-1 bg-white text-emerald-600 border border-emerald-200 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-all shrink-0">
+                                       Enviar
+                                    </span>
+                                 </button>
+                              ))
+                           })()}
+                        </div>
+                        
+                        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-800 leading-relaxed">
+                           💡 Podés agregar y modificar los destinatarios y sus números de teléfono ingresando a la sección de <strong>Configuración Global</strong> desde el menú principal.
+                        </div>
+                     </div>
                   </div>
                </div>
             </Portal>

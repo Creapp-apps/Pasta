@@ -261,6 +261,7 @@ export async function quickPurchaseInsumoAction(payload: {
 export async function quickUpdateTenantLogoAction(payload: {
    name: string
    logoUrl: string
+   whatsappContacts?: any[]
 }) {
    try {
       const supabase = await createClient()
@@ -270,12 +271,18 @@ export async function quickUpdateTenantLogoAction(payload: {
       const { data: userData } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
       if (!userData?.tenant_id) throw new Error("Sin fábrica")
 
+      const updateData: any = {
+         name: payload.name,
+         logo_url: payload.logoUrl
+      }
+
+      if (payload.whatsappContacts !== undefined) {
+         updateData.whatsapp_contacts = payload.whatsappContacts
+      }
+
       const { error } = await supabase
          .from('tenants')
-         .update({
-            name: payload.name,
-            logo_url: payload.logoUrl
-         } as any)
+         .update(updateData)
          .eq('id', userData.tenant_id)
 
       if (error) throw new Error(error.message)
