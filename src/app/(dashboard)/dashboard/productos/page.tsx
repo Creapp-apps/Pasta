@@ -12,27 +12,28 @@ export default async function ProductosPage() {
    
    if (!userData?.tenant_id) return <p className="p-8">Acceso denegado</p>
 
-   // Insumos para el wizard
-   const { data: insumos } = await supabase
-      .from('products')
-      .select('id, name, unit_of_measure')
-      .eq('tenant_id', userData.tenant_id)
-      .eq('type', 'raw_material')
-      .order('name')
+   const [insumosRes, productosRes, allVariantsRes] = await Promise.all([
+      supabase
+         .from('products')
+         .select('id, name, unit_of_measure')
+         .eq('tenant_id', userData.tenant_id)
+         .eq('type', 'raw_material')
+         .order('name'),
+      supabase
+         .from('products')
+         .select('*')
+         .eq('tenant_id', userData.tenant_id)
+         .eq('type', 'finished')
+         .order('name'),
+      supabase
+         .from('product_variants')
+         .select('*')
+         .eq('tenant_id', userData.tenant_id)
+   ])
 
-   // Productos existentes con variantes
-   const { data: productos } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-      .eq('type', 'finished')
-      .order('name')
-
-   // Variantes de cada producto
-   const { data: allVariants } = await supabase
-      .from('product_variants')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
+   const insumos = insumosRes.data
+   const productos = productosRes.data
+   const allVariants = allVariantsRes.data
 
    return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">

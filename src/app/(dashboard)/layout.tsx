@@ -13,18 +13,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (error || !user) { redirect('/login') }
 
   // 2. Role Check
-  const { data: superAdmin } = await supabase.from('super_admins').select('*').eq('id', user.id).single()
-  
-  // Si no es Super Admin, verificamos su rol en una fábrica
-  let employeeData = null
+  const [superAdminRes, empRes] = await Promise.all([
+     supabase.from('super_admins').select('*').eq('id', user.id).single(),
+     supabase.from('users').select('*').eq('id', user.id).single()
+  ])
+  const superAdmin = superAdminRes.data
+  let employeeData = empRes.data
   let tenantData = null
+  
   if (!superAdmin) {
-     const { data: emp } = await supabase.from('users').select('*').eq('id', user.id).single()
-     employeeData = emp
-     if (emp) {
-        const { data: ten } = await supabase.from('tenants').select('*').eq('id', emp.tenant_id).single()
-        tenantData = ten
-     } else {
+     if (!employeeData) {
         return (
            <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-800 flex-col gap-4">
              <h1 className="text-2xl font-bold">Acceso Pendiente</h1>
@@ -49,20 +47,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!isSuperAdmin && employeeData) {
      const tenantId = employeeData.tenant_id
-     const { data: prodData } = await supabase.from('products').select('*').eq('tenant_id', tenantId)
-     products = prodData || []
-
-     const { data: clientData } = await supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name')
-     clients = clientData || []
-
-     const { data: recData } = await supabase.from('recipes').select('finished_product_id').eq('tenant_id', tenantId)
-     recipes = recData?.map(r => r.finished_product_id) || []
-
-     const { data: varData } = await supabase.from('product_variants').select('*').eq('tenant_id', tenantId)
-     variants = varData || []
-
-     const { data: lotsData } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).neq('quantity_remaining', 0)
-     productionLots = lotsData || []
 
      // Fetch metrics for Metrics Modal in Argentina timezone (UTC-3)
      const now = new Date()
@@ -77,29 +61,49 @@ export default async function DashboardLayout({ children }: { children: React.Re
      const todayIso = arStartOfDay.toISOString()
      const arTodayStr = arStartOfDay.toISOString().split('T')[0]
 
-     const { data: todayOrdData } = await supabase
-        .from('orders')
-        .select('total_calc, payment_method, status, cash_session_id')
-        .eq('tenant_id', tenantId)
-        .gte('created_at', todayIso)
-        .or(`scheduled_date.is.null,scheduled_date.lte.${arTodayStr}`)
-     todayOrders = todayOrdData || []
+     const [
+        tenRes,
+        prodRes,
+        clientRes,
+        recRes,
+        varRes,
+        lotsRes,
+        todayOrdRes,
+        todayWstRes,
+        actSessRes
+     ] = await Promise.all([
+        supabase.from('tenants').select('*').eq('id', tenantId).single(),
+        supabase.from('products').select('*').eq('tenant_id', tenantId),
+        supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name'),
+        supabase.from('recipes').select('finished_product_id').eq('tenant_id', tenantId),
+        supabase.from('product_variants').select('*').eq('tenant_id', tenantId),
+        supabase.from('production_lots').select('*').eq('tenant_id', tenantId).neq('quantity_remaining', 0),
+        supabase.from('orders')
+           .select('total_calc, payment_method, status, cash_session_id')
+           .eq('tenant_id', tenantId)
+           .gte('created_at', todayIso)
+           .or(`scheduled_date.is.null,scheduled_date.lte.${arTodayStr}`),
+        supabase.from('stock_movements')
+           .select('quantity')
+           .eq('tenant_id', tenantId)
+           .eq('movement_type', 'waste')
+           .gte('created_at', todayIso),
+        supabase.from('cash_sessions')
+           .select('*')
+           .eq('tenant_id', tenantId)
+           .eq('status', 'open')
+           .maybeSingle()
+     ])
 
-     const { data: todayWstData } = await supabase
-        .from('stock_movements')
-        .select('quantity')
-        .eq('tenant_id', tenantId)
-        .eq('movement_type', 'waste')
-        .gte('created_at', todayIso)
-     todayWaste = todayWstData || []
-
-     const { data: actSessData } = await supabase
-        .from('cash_sessions')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'open')
-        .maybeSingle()
-     activeSession = actSessData
+     tenantData = tenRes.data
+     products = prodRes.data || []
+     clients = clientRes.data || []
+     recipes = recRes.data?.map(r => r.finished_product_id) || []
+     variants = varRes.data || []
+     productionLots = lotsRes.data || []
+     todayOrders = todayOrdRes.data || []
+     todayWaste = todayWstRes.data || []
+     activeSession = actSessRes.data
   }
 
   const roleTitle = isSuperAdmin ? "Súper Admin Maestro" : employeeData?.role || "Inactivo"

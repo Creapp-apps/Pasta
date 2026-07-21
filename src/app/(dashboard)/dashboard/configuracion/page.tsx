@@ -10,17 +10,21 @@ export default async function ConfiguracionPage() {
    
    if (!userData?.tenant_id) return <p className="p-8">Acceso denegado</p>
 
-   const { data: printerConfig } = await supabase
-      .from('printer_config')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-      .single()
+    const [printerConfigRes, tenantDataRes] = await Promise.all([
+       supabase
+          .from('printer_config')
+          .select('*')
+          .eq('tenant_id', userData.tenant_id)
+          .single(),
+       supabase
+          .from('tenants')
+          .select('name, logo_url, whatsapp_contacts')
+          .eq('id', userData.tenant_id)
+          .single()
+    ])
 
-   const { data: tenantData } = await supabase
-      .from('tenants')
-      .select('name, logo_url, whatsapp_contacts')
-      .eq('id', userData.tenant_id)
-      .single()
+    const printerConfig = printerConfigRes.data
+    const tenantData = tenantDataRes.data
 
    return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 max-w-3xl">

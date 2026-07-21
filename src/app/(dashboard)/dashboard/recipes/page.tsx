@@ -9,23 +9,25 @@ export default async function RecipesPage() {
   
   if (!uData?.tenant_id) return <p>Acceso denegado</p>
 
-  // Pedir catálogo de productos completo para segregar
-  const { data: allProducts } = await supabase.from('products').select('*').eq('tenant_id', uData.tenant_id).order('name')
+  const [allProductsRes, existingRecipesRes] = await Promise.all([
+     supabase.from('products').select('*').eq('tenant_id', uData.tenant_id).order('name'),
+     supabase
+        .from('recipes')
+        .select(`
+          id, base_yield,
+          products!recipes_finished_product_id_fkey(name, unit_of_measure),
+          recipe_ingredients(
+             required_quantity,
+             products!recipe_ingredients_raw_material_id_fkey(name, unit_of_measure)
+          )
+        `)
+        .eq('tenant_id', uData.tenant_id)
+  ])
+
+  const allProducts = allProductsRes.data
+  const existingRecipes = existingRecipesRes.data
   const finishedProducts = allProducts?.filter(p => p.type === 'finished') || []
   const rawMaterials = allProducts?.filter(p => p.type === 'raw_material') || []
-  
-  // Pedir Recetas Existentes haciendo Inner Join mágico gracias a foreign keys Supabase
-  const { data: existingRecipes } = await supabase
-     .from('recipes')
-     .select(`
-       id, base_yield,
-       products!recipes_finished_product_id_fkey(name, unit_of_measure),
-       recipe_ingredients(
-          required_quantity,
-          products!recipe_ingredients_raw_material_id_fkey(name, unit_of_measure)
-       )
-     `)
-     .eq('tenant_id', uData.tenant_id)
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">

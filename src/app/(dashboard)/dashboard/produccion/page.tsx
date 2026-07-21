@@ -10,27 +10,28 @@ export default async function ProduccionPage() {
    
    if (!userData?.tenant_id) return <p className="p-8">Acceso denegado</p>
 
-   // Productos terminados
-   const { data: products } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-      .eq('type', 'finished')
-      .order('name')
+    const [productsRes, variantsRes, recentLotsRes] = await Promise.all([
+       supabase
+          .from('products')
+          .select('*')
+          .eq('tenant_id', userData.tenant_id)
+          .eq('type', 'finished')
+          .order('name'),
+       supabase
+          .from('product_variants')
+          .select('*')
+          .eq('tenant_id', userData.tenant_id),
+       supabase
+          .from('production_lots')
+          .select('*, products(name), product_variants(name)')
+          .eq('tenant_id', userData.tenant_id)
+          .order('created_at', { ascending: false })
+          .limit(10)
+    ])
 
-   // Variantes
-   const { data: variants } = await supabase
-      .from('product_variants')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-
-   // Últimos lotes producidos
-   const { data: recentLots } = await supabase
-      .from('production_lots')
-      .select('*, products(name), product_variants(name)')
-      .eq('tenant_id', userData.tenant_id)
-      .order('created_at', { ascending: false })
-      .limit(10)
+    const products = productsRes.data
+    const variants = variantsRes.data
+    const recentLots = recentLotsRes.data
 
    return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">

@@ -9,26 +9,27 @@ export default async function AdminLogisticsPage() {
    
    if (!uData?.tenant_id) return <p className="p-8">Acceso Denegado: Entorno no localizado.</p>
 
-   // Obtener pedidos pendientes o listos (B2C)
-   const { data: availableOrders } = await supabase
-      .from('orders')
-      .select('id, total_calc, client_id, status, clients(name, address)')
-      .eq('tenant_id', uData.tenant_id)
-      .in('status', ['pending', 'ready'])
+   const [availableOrdersRes, repartidoresRes, activeRoutesRes] = await Promise.all([
+      supabase
+         .from('orders')
+         .select('id, total_calc, client_id, status, clients(name, address)')
+         .eq('tenant_id', uData.tenant_id)
+         .in('status', ['pending', 'ready']),
+      supabase
+         .from('users')
+         .select('id, full_name')
+         .eq('tenant_id', uData.tenant_id)
+         .eq('role', 'repartidor'),
+      supabase
+         .from('deliveries')
+         .select('id, status, route_date, users!deliveries_repartidor_id_fkey(full_name), delivery_stops(id, status)')
+         .eq('tenant_id', uData.tenant_id)
+         .eq('status', 'active')
+   ])
 
-   // Obtener cadetes/repartidores
-   const { data: repartidores } = await supabase
-      .from('users')
-      .select('id, full_name')
-      .eq('tenant_id', uData.tenant_id)
-      .eq('role', 'repartidor')
-      
-   // Rutas Activas
-   const { data: activeRoutes } = await supabase
-      .from('deliveries')
-      .select('id, status, route_date, users!deliveries_repartidor_id_fkey(full_name), delivery_stops(id, status)')
-      .eq('tenant_id', uData.tenant_id)
-      .eq('status', 'active')
+   const availableOrders = availableOrdersRes.data
+   const repartidores = repartidoresRes.data
+   const activeRoutes = activeRoutesRes.data
 
    return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">

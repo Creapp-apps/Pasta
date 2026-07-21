@@ -85,7 +85,11 @@ export default function FinishedProductsList({ terminados, allLots }: { terminad
                               </div>
                            </div>
                            <div className="text-right">
-                              <span className="font-mono font-black text-2xl text-slate-900">{item.current_stock}</span>
+                              <span className="font-mono font-black text-2xl text-slate-900">
+                                 {itemLots.length > 0
+                                    ? itemLots.reduce((acc: number, curr: any) => acc + Number(curr.quantity_remaining || 0), 0)
+                                    : Number(item.current_stock || 0)}
+                              </span>
                               <span className="text-sm font-semibold text-slate-500 ml-1">{item.unit_of_measure}</span>
                            </div>
                         </div>

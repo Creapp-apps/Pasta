@@ -11,34 +11,38 @@ export default async function PedidosPage() {
    const { data: userData } = await supabase.from('users').select('tenant_id').eq('id', user.id).single()
    if (!userData?.tenant_id) return <div className="p-8">Error de inquilino</div>
 
-   const { data: orders } = await supabase
-      .from('orders')
-      .select('*, clients(name, address, phone_number), order_items(id, quantity, unit_price, products(name), product_variants(name))')
-      .eq('tenant_id', userData.tenant_id)
-      .order('created_at', { ascending: false })
+   const [ordersRes, productsRes, variantsRes, repartidoresRes, activeSessionRes] = await Promise.all([
+      supabase
+         .from('orders')
+         .select('*, clients(name, address, phone_number), order_items(id, quantity, unit_price, products(name), product_variants(name))')
+         .eq('tenant_id', userData.tenant_id)
+         .order('created_at', { ascending: false }),
+      supabase
+         .from('products')
+         .select('*')
+         .eq('tenant_id', userData.tenant_id),
+      supabase
+         .from('product_variants')
+         .select('*')
+         .eq('tenant_id', userData.tenant_id),
+      supabase
+         .from('users')
+         .select('id, full_name')
+         .eq('tenant_id', userData.tenant_id)
+         .eq('role', 'repartidor'),
+      supabase
+         .from('cash_sessions')
+         .select('*')
+         .eq('tenant_id', userData.tenant_id)
+         .eq('status', 'open')
+         .maybeSingle()
+   ])
 
-   const { data: products } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-
-   const { data: variants } = await supabase
-      .from('product_variants')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-
-   const { data: repartidores } = await supabase
-      .from('users')
-      .select('id, full_name')
-      .eq('tenant_id', userData.tenant_id)
-      .eq('role', 'repartidor')
-
-   const { data: activeSession } = await supabase
-      .from('cash_sessions')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-      .eq('status', 'open')
-      .maybeSingle()
+   const orders = ordersRes.data
+   const products = productsRes.data
+   const variants = variantsRes.data
+   const repartidores = repartidoresRes.data
+   const activeSession = activeSessionRes.data
 
    return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">

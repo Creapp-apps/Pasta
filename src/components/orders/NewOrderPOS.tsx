@@ -122,11 +122,14 @@ export default function NewOrderPOS({
                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                   {products.map(p => {
-                      const pVars = variants.filter(v => v.product_id === p.id)
-                      if (pVars.length === 0) {
-                         const prodStock = p.current_stock !== undefined && p.current_stock !== null ? p.current_stock : 0
-                         return (
+                    {products.map(p => {
+                       const pVars = variants.filter(v => v.product_id === p.id)
+                       if (pVars.length === 0) {
+                          const prodLots = activeLots.filter((l: any) => l.product_id === p.id)
+                          const prodStock = prodLots.length > 0
+                             ? prodLots.reduce((acc: number, curr: any) => acc + Number(curr.quantity_remaining || 0), 0)
+                             : (p.current_stock !== undefined && p.current_stock !== null ? p.current_stock : 0)
+                          return (
                             <button 
                                key={p.id} 
                                onClick={() => addProductToCart(p.id, null)} 

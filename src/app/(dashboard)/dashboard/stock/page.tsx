@@ -9,21 +9,23 @@ export default async function StockCentralPage() {
    
    if (!userData?.tenant_id) return <p className="p-8">Acceso denegado</p>
 
-   // Todos los productos (insumos + terminados)
-   const { data: allProducts } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', userData.tenant_id)
-      .order('type', { ascending: false })
-      .order('name')
+   const [allProductsRes, activeLotsRes] = await Promise.all([
+      supabase
+         .from('products')
+         .select('*')
+         .eq('tenant_id', userData.tenant_id)
+         .order('type', { ascending: false })
+         .order('name'),
+      supabase
+         .from('production_lots')
+         .select('*, products(name), product_variants(name)')
+         .eq('tenant_id', userData.tenant_id)
+         .neq('quantity_remaining', 0)
+         .order('elaboration_date', { ascending: false })
+   ])
 
-   // Lotes activos
-   const { data: activeLots } = await supabase
-      .from('production_lots')
-      .select('*, products(name), product_variants(name)')
-      .eq('tenant_id', userData.tenant_id)
-      .neq('quantity_remaining', 0)
-      .order('elaboration_date', { ascending: false })
+   const allProducts = allProductsRes.data
+   const activeLots = activeLotsRes.data
 
    const insumos = allProducts?.filter(p => p.type === 'raw_material') || []
    const terminados = allProducts?.filter(p => p.type === 'finished') || []

@@ -6,9 +6,16 @@ import Link from 'next/link'
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: superAdmin } = await supabase.from('super_admins').select('*').eq('id', user?.id).single()
+  if (!user) return null
 
+  const [superAdminRes, userDataRes] = await Promise.all([
+    supabase.from('super_admins').select('*').eq('id', user.id).single(),
+    supabase.from('users').select('*, tenants(name)').eq('id', user.id).single()
+  ])
+
+  const superAdmin = superAdminRes.data
   const isSuperAdmin = !!superAdmin
+  const userData = userDataRes.data
 
   // VISTA 1: SUPER ADMIN MAESTRO
   if (isSuperAdmin) {
@@ -69,19 +76,8 @@ export default async function DashboardPage() {
   }
 
   // VISTA 2: EMPLEADOS Y ADMINS DE LAS FABRICAS
-  const { data: userData } = await supabase.from('users').select('*, tenants(name)').eq('id', user?.id).single()
   const tenantName = userData?.tenants?.name || "Fábrica"
   const tenantId = userData?.tenant_id
-
-  const { data: pendingOrders } = await supabase.from('orders').select('*').eq('tenant_id', tenantId).eq('status', 'pending')
-  const { data: totalProducts } = await supabase.from('products').select('*').eq('tenant_id', tenantId)
-  const { data: clients } = await supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name')
-  const { data: recipesData } = await supabase.from('recipes').select('finished_product_id').eq('tenant_id', tenantId)
-  const recipes = recipesData?.map(r => r.finished_product_id) || []
-
-  // Consultas para stock en tiempo real por sabor
-  const { data: allVariants } = await supabase.from('product_variants').select('*').eq('tenant_id', tenantId)
-  const { data: activeLots } = await supabase.from('production_lots').select('*').eq('tenant_id', tenantId).neq('quantity_remaining', 0)
 
   // Obtener ventas del día en la zona horaria de Argentina (UTC-3)
   const now = new Date()
@@ -96,23 +92,45 @@ export default async function DashboardPage() {
   const todayIso = arStartOfDay.toISOString()
   const arTodayStr = arStartOfDay.toISOString().split('T')[0]
 
-  const { data: todayOrders } = await supabase
-     .from('orders')
-     .select('total_calc')
-     .eq('tenant_id', tenantId)
-     .gte('created_at', todayIso)
-     .or(`scheduled_date.is.null,scheduled_date.lte.${arTodayStr}`)
+  const [
+    pendingOrdersRes,
+    totalProductsRes,
+    clientsRes,
+    recipesRes,
+    allVariantsRes,
+    activeLotsRes,
+    todayOrdersRes,
+    todayWasteRes
+  ] = await Promise.all([
+    supabase.from('orders').select('*').eq('tenant_id', tenantId).eq('status', 'pending'),
+    supabase.from('products').select('*').eq('tenant_id', tenantId),
+    supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name'),
+    supabase.from('recipes').select('finished_product_id').eq('tenant_id', tenantId),
+    supabase.from('product_variants').select('*').eq('tenant_id', tenantId),
+    supabase.from('production_lots').select('*').eq('tenant_id', tenantId).neq('quantity_remaining', 0),
+    supabase.from('orders')
+      .select('total_calc')
+      .eq('tenant_id', tenantId)
+      .gte('created_at', todayIso)
+      .or(`scheduled_date.is.null,scheduled_date.lte.${arTodayStr}`),
+    supabase.from('stock_movements')
+      .select('quantity')
+      .eq('tenant_id', tenantId)
+      .eq('movement_type', 'waste')
+      .gte('created_at', todayIso)
+  ])
+
+  const pendingOrders = pendingOrdersRes.data
+  const totalProducts = totalProductsRes.data
+  const clients = clientsRes.data
+  const recipesData = recipesRes.data
+  const recipes = recipesData?.map(r => r.finished_product_id) || []
+  const allVariants = allVariantsRes.data
+  const activeLots = activeLotsRes.data
+  const todayOrders = todayOrdersRes.data
+  const todayWaste = todayWasteRes.data
 
   const shiftSales = todayOrders?.reduce((acc, curr) => acc + Number(curr.total_calc || 0), 0) || 0
-
-  // Obtener mermas del día
-  const { data: todayWaste } = await supabase
-     .from('stock_movements')
-     .select('quantity')
-     .eq('tenant_id', tenantId)
-     .eq('movement_type', 'waste')
-     .gte('created_at', todayIso)
-
   const shiftWaste = todayWaste?.reduce((acc, curr) => acc + Number(curr.quantity || 0), 0) || 0
 
   return (
@@ -163,6 +181,10 @@ export default async function DashboardPage() {
                    <div className="space-y-4">
                       {finishedProducts.map(prod => {
                          const prodVariants = allVariants?.filter(v => v.product_id === prod.id) || []
+                         const prodLots = activeLots?.filter(l => l.product_id === prod.id) || []
+                         const totalStock = prodLots.length > 0
+                            ? prodLots.reduce((acc, curr) => acc + Number(curr.quantity_remaining || 0), 0)
+                            : Number(prod.current_stock || 0)
                          return (
                             <div key={prod.id} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
                                <div className="flex justify-between items-center border-b border-slate-200/60 pb-2 mb-3">
@@ -171,7 +193,7 @@ export default async function DashboardPage() {
                                      {prod.name}
                                   </span>
                                   <span className="font-mono font-black text-slate-900 bg-white border border-slate-200 px-3 py-1 rounded-xl text-xs">
-                                     Total: {prod.current_stock} {prod.unit_of_measure}
+                                     Total: {totalStock} {prod.unit_of_measure}
                                   </span>
                                </div>
                                
